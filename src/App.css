@@ -1,23 +1,18 @@
+/* Layout: fluid single column, hairline rules, no rounded corners. */
+
 .app {
   width: 100%;
-  max-width: 60rem;
+  max-width: 76rem;
   margin: 0 auto;
-  padding: 1rem 1rem 3rem;
-}
-
-@media (min-width: 640px) {
-  .app {
-    padding: 2rem 1.25rem 4rem;
-  }
+  padding: clamp(1rem, 3vw, 2.25rem) clamp(1rem, 3vw, 2rem) clamp(2.5rem, 6vw, 4rem);
 }
 
 /* Header */
 
 .app-header {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--border);
@@ -26,13 +21,14 @@
 .brand {
   padding: 0.5rem 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: none;
   color: var(--fg);
   font: inherit;
-  font-size: 1.0625rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -42,7 +38,7 @@
 
 .nav {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.125rem;
 }
 
 .nav button {
@@ -52,7 +48,7 @@
   min-height: 44px;
   padding: 0 0.75rem;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: none;
   color: var(--muted);
   font: inherit;
@@ -73,8 +69,8 @@
 
 .nav .count {
   min-width: 1.35rem;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
+  padding: 0.05rem 0.3rem;
+  border-radius: 0;
   background: var(--border);
   color: var(--muted);
   font-size: 0.75rem;
@@ -97,7 +93,7 @@
   min-height: 48px;
   padding: 0.7rem 0.9rem;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--fg);
   font: inherit;
@@ -112,7 +108,7 @@
 .search input:focus-visible {
   border-color: var(--accent);
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: -1px;
 }
 
 .hint {
@@ -121,44 +117,43 @@
   font-size: 0.875rem;
 }
 
+/* Filters share one equal-width grid, so rows stay aligned at every width. */
+
 .filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   gap: 0.5rem;
   margin: 0 0 0.75rem;
 }
 
 .filter-input {
+  width: 100%;
   min-height: 44px;
   padding: 0 0.55rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--fg);
   font: inherit;
   font-size: 0.875rem;
 }
 
-.filter-input.year {
-  width: 7.5rem;
-}
-
 .filter-input:focus-visible {
   border-color: var(--accent);
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: -1px;
 }
 
 .filter-toggle {
   min-height: 44px;
-  padding: 0 0.7rem;
+  padding: 0 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0;
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  text-align: center;
   cursor: pointer;
 }
 
@@ -168,9 +163,9 @@
 }
 
 .filter-toggle[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: var(--surface);
-  color: var(--accent);
+  border-color: var(--fg);
+  background: var(--fg);
+  color: var(--bg);
 }
 
 .history {
@@ -193,17 +188,17 @@
 }
 
 .history-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 
 .history-item {
   min-height: 44px;
-  padding: 0 0.7rem;
+  padding: 0.5rem 0.7rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0;
   background: none;
   color: var(--fg);
   font: inherit;
@@ -238,18 +233,26 @@
   margin-top: 0.75rem;
 }
 
-/* Result list */
+/* Result list: a hairline grid that collapses to one column on narrow screens. */
 
 .work-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
   margin: 0.5rem 0 0;
   padding: 0;
   border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
   list-style: none;
 }
 
 .work-card {
-  padding: 1rem 0;
+  padding: 1rem 1.1rem;
+  border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+}
+
+.work-card:hover {
+  background: var(--surface);
 }
 
 .work-card-title {
@@ -290,9 +293,9 @@
 }
 
 .tag {
-  padding: 0.1rem 0.5rem;
+  padding: 0.05rem 0.4rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.6;
@@ -320,7 +323,7 @@
   min-height: 44px;
   padding: 0 0.95rem;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--fg);
   font: inherit;
@@ -436,9 +439,15 @@
   border-bottom: 1px solid var(--border);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 560px) {
   .meta-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .meta-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -554,7 +563,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .tabs {
@@ -567,7 +577,7 @@
   min-height: 44px;
   padding: 0 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0;
   background: none;
   color: var(--muted);
   font: inherit;
@@ -626,7 +636,7 @@
   min-height: 44px;
   padding: 0 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--fg);
   font: inherit;
@@ -648,7 +658,7 @@
   min-height: 64px;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--fg);
   font: inherit;
@@ -659,24 +669,28 @@
 
 .note:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: -1px;
 }
 
-/* Loading placeholders */
+/* Loading placeholders: same hairline grid as results, so nothing shifts. */
 
 .skeleton {
-  padding: 0.5rem 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
 }
 
 .skeleton-row {
-  padding: 1rem 0;
+  padding: 1.2rem 1.1rem;
+  border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
 
 .skeleton-line {
   height: 0.8rem;
   margin: 0.45rem 0;
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--border);
   opacity: 0.65;
 }

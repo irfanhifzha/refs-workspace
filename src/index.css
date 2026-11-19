@@ -57,7 +57,7 @@ a {
 
 code {
   padding: 0.15em 0.35em;
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--code-bg);
   font-size: 0.9em;
   overflow-wrap: anywhere;
