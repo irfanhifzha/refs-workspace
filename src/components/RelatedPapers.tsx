@@ -54,7 +54,7 @@ export function RelatedPapers({ work, isSaved, onOpenDoi }: Props) {
       )}
 
       {state.status === 'loading' && (
-        <div className="skeleton" aria-busy="true" aria-label="Finding related papers">
+        <div className="skeleton" role="status" aria-busy="true" aria-label="Finding related papers">
           <div className="skeleton-row">
             <div className="skeleton-line w-80" />
             <div className="skeleton-line w-50" />
@@ -72,7 +72,9 @@ export function RelatedPapers({ work, isSaved, onOpenDoi }: Props) {
       )}
 
       {state.status === 'done' && state.items.length === 0 && (
-        <p className="hint">No close matches found for this paper.</p>
+        <p className="hint" role="status">
+          No close matches found for this paper.
+        </p>
       )}
 
       {state.status === 'done' && state.items.length > 0 && (

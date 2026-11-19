@@ -5,12 +5,17 @@ import { STATUSES, STATUS_LABELS, serializeLibrary } from '../lib/storage'
 import { parseImportFile } from '../lib/importers'
 import { authorLine, parseYear, workTitle } from '../lib/crossref'
 import { toBibtex } from '../lib/citations'
+import { copyToClipboard } from '../lib/clipboard'
+import { SHARE_LIMIT, shareLibraryUrl } from '../lib/share'
 import { STALE_DAYS, isStale } from '../hooks/useLibrary'
 
 type Filter = 'all' | ReadingStatus
 
 type Props = {
   entries: LibraryEntry[]
+  ready: boolean
+  shared: LibraryEntry[] | null
+  onSharedDone: () => void
   onOpen: (doi: string) => void
   onRemove: (doi: string) => void
   onStatus: (doi: string, status: ReadingStatus) => void
@@ -109,6 +114,9 @@ function NoteField({ value, onSave }: { value: string; onSave: (note: string) =>
 
 export function LibraryView({
   entries,
+  ready,
+  shared,
+  onSharedDone,
   onOpen,
   onRemove,
   onStatus,
@@ -189,6 +197,34 @@ export function LibraryView({
     }
   }
 
+  async function handleShare() {
+    const url = shareLibraryUrl(entries)
+    if (!url) return
+
+    try {
+      await copyToClipboard(url)
+      setNotice({
+        kind: 'ok',
+        text: `Share link copied — ${plural(Math.min(entries.length, SHARE_LIMIT), 'paper')}. Notes stay private.`,
+      })
+    } catch {
+      setNotice({ kind: 'error', text: 'Could not copy the share link. Your browser may block the clipboard.' })
+    }
+  }
+
+  function addShared() {
+    if (!shared) return
+    const { added, skipped } = onImport(shared)
+    setNotice({
+      kind: 'ok',
+      text:
+        added === 0
+          ? `No new papers — all ${plural(skipped, 'entry')} are already in the library.`
+          : `Added ${plural(added, 'paper')} from the shared link${skipped > 0 ? `; ${plural(skipped, 'entry')} already in the library` : ''}.`,
+    })
+    onSharedDone()
+  }
+
   function applyImport() {
     if (!pending) return
     const { added, skipped } = onImport(pending.entries)
@@ -206,6 +242,8 @@ export function LibraryView({
 
   return (
     <div className="library">
+      <h1 className="visually-hidden">Library</h1>
+
       <div className="library-toolbar">
         <div className="tabs" role="group" aria-label="Filter by reading status">
           {FILTERS.map((option) => (
@@ -234,6 +272,9 @@ export function LibraryView({
                 ? `Refresh ${staleCount} ${staleCount === 1 ? 'entry' : 'entries'}`
                 : 'Metadata current'}
           </button>
+          <button type="button" className="btn" onClick={handleShare} disabled={entries.length === 0}>
+            Copy share link
+          </button>
           <button
             type="button"
             className="btn"
@@ -261,6 +302,29 @@ export function LibraryView({
           </label>
         </div>
       </div>
+
+      {ready && shared && shared.length > 0 && (
+        <section className="import-review" aria-label="Shared reading list">
+          <p className="hint">
+            This link contains {plural(shared.length, 'paper')}. Notes and full reference lists are not
+            included.
+          </p>
+          <ul className="import-preview">
+            {shared.slice(0, 5).map((entry) => (
+              <li key={entry.doi}>{workTitle(entry.work)}</li>
+            ))}
+            {shared.length > 5 && <li>…and {shared.length - 5} more</li>}
+          </ul>
+          <div className="btn-row">
+            <button type="button" className="btn btn-primary" onClick={addShared}>
+              Add to library
+            </button>
+            <button type="button" className="btn" onClick={onSharedDone}>
+              Dismiss
+            </button>
+          </div>
+        </section>
+      )}
 
       {pending && (
         <section className="import-review" aria-label="Review import">
@@ -310,17 +374,25 @@ export function LibraryView({
         </p>
       )}
 
-      {entries.length === 0 && (
-        <p className="state">
+      {!ready && (
+        <p className="state" role="status">
+          Loading library…
+        </p>
+      )}
+
+      {ready && entries.length === 0 && (
+        <p className="state" role="status">
           Nothing saved yet. Search for a paper and use “Save to library”.
         </p>
       )}
 
-      {entries.length > 0 && visible.length === 0 && (
-        <p className="state">No papers in this list.</p>
+      {ready && entries.length > 0 && visible.length === 0 && (
+        <p className="state" role="status">
+          No papers in this list.
+        </p>
       )}
 
-      {visible.length > 0 && (
+      {ready && visible.length > 0 && (
         <ul className="library-list">
           {visible.map((entry) => {
             const meta = [

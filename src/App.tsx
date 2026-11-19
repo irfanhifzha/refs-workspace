@@ -10,7 +10,11 @@ import { useRoute } from './hooks/useRoute'
 import type { SearchFilters } from './lib/crossref'
 import { parseDoiInput } from './lib/crossref'
 import { goBack, initializeRouter, navigate } from './lib/router'
+import type { LibraryEntry } from './lib/storage'
 import { loadSearchHistory, rememberSearch, saveSearchHistory } from './lib/storage'
+import { decodeLibraryHash } from './lib/share'
+import type { Theme } from './lib/theme'
+import { applyTheme, loadTheme, saveTheme, THEME_LABELS, THEMES } from './lib/theme'
 import './App.css'
 
 function App() {
@@ -27,9 +31,24 @@ function App() {
   })
   const library = useLibrary()
   const [history, setHistory] = useState(loadSearchHistory)
+  const [shared, setShared] = useState<LibraryEntry[] | null>(() =>
+    decodeLibraryHash(window.location.hash),
+  )
+  const [theme, setTheme] = useState<Theme>(loadTheme)
 
   useEffect(() => {
     initializeRouter()
+  }, [])
+
+  useEffect(() => {
+    applyTheme(theme)
+  }, [theme])
+
+  // A shared link lands on the library so its reading list is visible.
+  useEffect(() => {
+    if (shared) navigate({ name: 'library' }, { replace: true })
+    // Shared links are read once at startup.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -100,6 +119,15 @@ function App() {
 
   const clearHistory = useCallback(() => setHistory([]), [])
 
+  const clearShared = useCallback(() => {
+    setShared(null)
+    window.history.replaceState(
+      window.history.state,
+      '',
+      window.location.pathname + window.location.search,
+    )
+  }, [])
+
   return (
     <div className="app">
       <a className="skip-link" href="#main">
@@ -111,25 +139,46 @@ function App() {
           Refs Workspace
         </button>
 
-        <nav className="nav" aria-label="Main">
-          <button
-            type="button"
-            aria-current={route.name === 'search' ? 'page' : undefined}
-            onClick={() => openTab('search')}
-          >
-            Search
-          </button>
-          <button
-            type="button"
-            aria-current={route.name === 'library' ? 'page' : undefined}
-            onClick={() => openTab('library')}
-          >
-            Library
-            {library.entries.length > 0 && (
-              <span className="count">{library.entries.length}</span>
-            )}
-          </button>
-        </nav>
+        <div className="header-tools">
+          <label className="theme-control">
+            <span className="visually-hidden">Theme</span>
+            <select
+              className="theme-select"
+              value={theme}
+              onChange={(event) => {
+                const next = event.target.value as Theme
+                setTheme(next)
+                saveTheme(next)
+              }}
+            >
+              {THEMES.map((option) => (
+                <option key={option} value={option}>
+                  {THEME_LABELS[option]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <nav className="nav" aria-label="Main">
+            <button
+              type="button"
+              aria-current={route.name === 'search' ? 'page' : undefined}
+              onClick={() => openTab('search')}
+            >
+              Search
+            </button>
+            <button
+              type="button"
+              aria-current={route.name === 'library' ? 'page' : undefined}
+              onClick={() => openTab('library')}
+            >
+              Library
+              {library.ready && library.entries.length > 0 && (
+                <span className="count">{library.entries.length}</span>
+              )}
+            </button>
+          </nav>
+        </div>
       </header>
 
       <main id="main" className="app-main" tabIndex={-1}>
@@ -160,6 +209,9 @@ function App() {
           {route.name === 'library' && (
             <LibraryView
               entries={library.entries}
+              ready={library.ready}
+              shared={shared}
+              onSharedDone={clearShared}
               onOpen={openPaper}
               onRemove={library.remove}
               onStatus={library.setStatus}

@@ -42,6 +42,8 @@ export function SearchView({
 
   return (
     <div>
+      <h1 className="visually-hidden">Search papers</h1>
+
       <SearchBar value={draft} history={history} onChange={setDraft} onSubmit={onSubmit} />
 
       <SearchFilterBar
@@ -76,7 +78,7 @@ export function SearchView({
       {showMinHint && <p className="hint">Type at least {MIN_QUERY_LENGTH} characters to search.</p>}
 
       {search.loading && (
-        <div className="skeleton" aria-busy="true" aria-label="Searching Crossref">
+        <div className="skeleton" role="status" aria-busy="true" aria-label="Searching Crossref">
           {[0, 1, 2].map((row) => (
             <div className="skeleton-row" key={row}>
               <div className="skeleton-line w-80" />
@@ -110,7 +112,9 @@ export function SearchView({
           </p>
 
           {search.items.length === 0 ? (
-            <p className="state">No papers matched. Try a different title, author, or journal.</p>
+            <p className="state" role="status">
+              No papers matched. Try a different title, author, or journal.
+            </p>
           ) : (
             <ul className="work-list">
               {search.items.map((work) => (

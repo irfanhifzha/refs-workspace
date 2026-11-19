@@ -55,7 +55,8 @@ dodge limits is explicitly discouraged by Crossref.
 | Clicking "Find related papers" | 1 per paper, only when clicked | Related results cached by DOI |
 | Clicking "Find open-access PDF" | 1 Unpaywall request per paper, only when clicked (0 when Crossref deposited a PDF link) | Result, including "none", cached by DOI |
 | Refreshing stale metadata | 1 queued request per stale entry, only when pressed | Detail cache updated |
-| Importing a JSON, BibTeX, or RIS file | 0 | Previewed, then merged into `localStorage` |
+| Importing a JSON, BibTeX, or RIS file | 0 | Previewed, then merged into the library store |
+| Opening a shared reading-list link | 0 | Reviewed, then merged on request |
 | Clicking between search and library | 0 | Returning to the same search URL is served from the search cache |
 | Saving / removing / editing notes | 0 | `localStorage` only |
 | Copying a citation / exporting BibTeX | 0 | Local formatting only |
@@ -138,6 +139,23 @@ Every Crossref call goes through `src/lib/queue.ts`, which runs one request at a
 - Waiting in the queue is abortable: submitting a new search cancels the queued request immediately.
 - Cached pages and works bypass the queue entirely, because they cost no request.
 
+## Storage and sharing
+
+The library lives in IndexedDB (`refs-workspace`, object store `entries` keyed by DOI, plus a `meta`
+record for reading order). Each change writes one record; reordering or importing rewrites the whole
+store in one transaction. A one-time migration moves the old `localStorage` array and removes it only
+after the write succeeds. If IndexedDB is unavailable (some private modes), the app falls back to the
+old `localStorage` behaviour instead of losing saves. Search history and the theme stay in
+`localStorage`, and the Crossref caches remain memory-only per page load.
+
+A shared link is `/library#library=<base64url>` containing at most 40 papers: DOI, title, up to three
+authors, year, journal, type, and reading status. Notes, added dates, and reference lists are left out,
+and the receiving app shows a review step before merging.
+
+The production build also registers a service worker that caches the shell (network-first for pages,
+cache-first for assets), so the app and its IndexedDB library open with no connection. Crossref requests
+and detail pages still need the network.
+
 ### Open-access PDFs
 
 Two sources, in order:
@@ -185,6 +203,8 @@ Honest gaps, useful to know before scaling usage:
 - No server-side cache, shared cache, or persistence of Crossref data beyond saved library metadata.
 - No use of `x-concurrency-limit` or `x-api-pool`; the queue is always single-flight.
 - No PDF hosting or downloading — links only, and only when a legal copy is known.
+- No cross-device sync; a shared link is the only way to move a list between browsers.
+- No offline detail pages yet — the shell and library work offline, but metadata and references do not.
 - No request coalescing: two components asking for the same DOI before the first response lands can
   issue two requests (rare in practice; the detail view is single-instance).
 

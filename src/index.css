@@ -1,6 +1,4 @@
 :root {
-  color-scheme: light dark;
-
   --bg: #ffffff;
   --fg: #1b1b1f;
   --muted: #6b6375;
@@ -39,6 +37,8 @@
   --measure: 70ch;
   --measure-sm: 60ch;
 
+  color-scheme: light dark;
+
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -46,8 +46,57 @@
   text-rendering: optimizeLegibility;
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #16171d;
+  --fg: #f3f4f6;
+  --muted: #9ca3af;
+  --surface: #1c1d24;
+  --hover: rgba(255, 255, 255, 0.06);
+  --border: #2e303a;
+  --accent: #a78bfa;
+  --accent-contrast: #16171d;
+  --danger: #f87171;
+  --code-bg: #1f2028;
+}
+
+:root[data-theme="sepia"] {
+  color-scheme: light;
+  --bg: #f6edd9;
+  --fg: #322b20;
+  --muted: #6c5f4a;
+  --surface: #efe4cc;
+  --hover: rgba(80, 60, 30, 0.08);
+  --border: #d8c9a9;
+  --accent: #8a5a2b;
+  --accent-contrast: #fffaf0;
+  --danger: #a12b2b;
+  --code-bg: #eadfc4;
+}
+
+:root[data-theme="contrast"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --fg: #ffffff;
+  --muted: #d4d4d8;
+  --surface: #101014;
+  --hover: rgba(255, 255, 255, 0.16);
+  --border: #ffffff;
+  --accent: #ffe600;
+  --accent-contrast: #000000;
+  --danger: #ff8080;
+  --code-bg: #101014;
+}
+
+/* Until JS sets data-theme, follow the OS preference. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]),
+  :root[data-theme="system"] {
+    color-scheme: dark;
     --bg: #16171d;
     --fg: #f3f4f6;
     --muted: #9ca3af;
@@ -91,7 +140,7 @@ code {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--ring) solid var(--accent);
   outline-offset: 2px;
 }
 

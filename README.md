@@ -4,7 +4,8 @@ A small workspace for learning web development while researching: search scholar
 [Crossref REST API](https://api.crossref.org), read their metadata and references, and keep a personal
 reading list.
 
-Planning and status live in [`plan.md`](./plan.md).
+New here? Read the workflow guide in [`guide.md`](./guide.md), which includes a seed library to import
+as a starting point. Planning and status live in [`plan.md`](./plan.md).
 
 ## What it does
 
@@ -16,8 +17,9 @@ Planning and status live in [`plan.md`](./plan.md).
   search box.
 - Open a paper for full metadata, abstract, and its deposited reference list; follow DOI-carrying
   references into the app or out to doi.org.
-- Save papers to a local library, track `To read` / `Reading` / `Done`, attach notes, and reorder the
-  `To read` queue by hand.
+- Save papers to a library stored in IndexedDB (with a `localStorage` fallback), track `To read` /
+  `Reading` / `Done`, attach notes, and reorder the `To read` queue by hand.
+- Share a reading list as a URL hash (up to 40 papers, notes excluded) and review it before importing.
 - Refresh stale metadata snapshots from Crossref on demand, with a "last updated" date per entry.
 - Open a PDF when Crossref deposits a link, or look one up through Unpaywall.
 - Copy APA, Chicago, Harvard, IEEE, MLA, or Vancouver citations (or BibTeX), and export the whole
@@ -29,7 +31,8 @@ Planning and status live in [`plan.md`](./plan.md).
 - Keep every view and every search criterion in the URL — `/` (with `?q=`), `/library`, and `/paper?doi=…` — so reloads,
   bookmarks, and back/forward navigation work.
 
-No backend, no account, no runtime dependencies beyond React.
+No backend, no account, no runtime dependencies beyond React. It installs as a PWA with an offline
+app shell, a bottom tab bar on small screens, and light, dark, sepia, and high-contrast themes.
 
 ## API usage philosophy
 
@@ -111,9 +114,10 @@ JSON to open a paper, opt-in related papers reranked by subject overlap, JSON/Bi
 review step, reference-free library snapshots, a serialized request queue that follows Crossref's
 rate-limit headers, a manual reading queue, PDF links via Crossref/Unpaywall, six citation styles, an
 on-demand metadata refresh with per-entry dates, a local dev-only error log, a focus/ARIA accessibility
-pass, shared design tokens, a `/dev` component gallery, Vitest and Playwright coverage, and a
-sharp-edged, grid-based responsive layout verified at 320–1440 px with Lighthouse
-performance/accessibility at 100.
+pass, shared design tokens, a `/dev` component gallery, an IndexedDB library with localStorage
+migration/fallback, shareable reading-list links, sepia/high-contrast themes, an installable PWA with
+an offline shell and mobile bottom nav, Vitest and Playwright coverage, and a sharp-edged, grid-based
+responsive layout verified at 320–1440 px with Lighthouse performance/accessibility at 100.
 
 ### Search and discovery
 
@@ -161,10 +165,8 @@ performance/accessibility at 100.
 
 ### Data, offline, and continuity
 
-- **IndexedDB instead of `localStorage`** — removes the size ceiling and the synchronous-write jank;
-  the `storage.ts` seam already exists for exactly this swap. **[learning: async storage, migrations]**
-- **Offline-first PWA** — service worker caches the shell and the last N work records; the library is
-  readable with no connection. Already a non-goal for the MVP, but a natural next chapter.
+- **Offline paper cache** — the service worker caches the shell and the library; extend it to cache
+  opened work records so detail pages also work with no connection.
 - **Cross-device sync** — the honest version needs a backend (or a sync service), which changes the
   whole no-backend premise. Options: export/import files, a user-owned sync folder, or GitHub Gist. Any
   of these is a big design decision, not a weekend tweak.
@@ -173,9 +175,6 @@ performance/accessibility at 100.
 
 - **Browser extension** — "save this paper" from a DOI page or a journal site, adding to the same library.
 - **Desktop wrapper** (Tauri/Electron) for a real local-first app; mostly a packaging exercise.
-- **Mobile-friendly library** — an installable PWA with a bottom nav, which makes "read later on the
-  train" actually work.
-- **Peer / shared library links** — encode a small library in a URL hash for sharing a reading list.
 - **Small backend proxy** (only if the app ever leaves localhost) — server-side Crossref cache, shared
   polite-pool identity, and higher limits via Metadata Plus. **[learning: caching, deployment]**
 
@@ -183,8 +182,8 @@ performance/accessibility at 100.
 
 - **i18n seam** — even English-only, routing strings through a tiny dictionary makes a later
   translation cheap.
-- **Theme variants** — the tokens are in place; a sepia or high-contrast theme is now a variable swap.
-- **Screen-reader audit** on the loading/empty/error states, beyond the current focus and labeling pass.
+- **Assistive-technology testing** — a real NVDA/VoiceOver session with a keyboard-only user, beyond
+  the current structural audit and automated checks.
 
 ### Deliberately not planned
 
@@ -195,5 +194,5 @@ performance/accessibility at 100.
 - A component library or design system — the hand-written CSS is part of the learning goal.
 
 **Picking the next one:** the highest value-per-effort items are "cited by" via OpenCitations, tags and
-collections, and bulk library actions. The flashiest is the citation graph; the most useful in daily
-research is probably "cited by" plus a stable citation key.
+collections, and an offline cache for opened papers. The flashiest is the citation graph; the most
+useful in daily research is probably "cited by" plus a stable citation key.

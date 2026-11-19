@@ -84,6 +84,28 @@ test('arrow-up recalls a recent search', async ({ page }) => {
   await expect(searchbox).toHaveValue('quantum electrodynamics')
 })
 
+test('theme choice persists across reloads', async ({ page }) => {
+  await page.goto('/')
+
+  await page.getByRole('combobox', { name: 'Theme' }).selectOption('sepia')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'sepia')
+
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'sepia')
+})
+
+test('a shared library link is reviewed before importing', async ({ page }) => {
+  const payload = { v: 1, e: [{ d: '10.1234/shared', t: 'Shared paper title', s: 'to-read' }] }
+  const token = Buffer.from(JSON.stringify(payload)).toString('base64url')
+
+  await page.goto(`/library#library=${token}`)
+  await expect(page.getByText('This link contains 1 paper.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Add to library' }).click()
+  await expect(page.getByRole('button', { name: 'Shared paper title' })).toBeVisible()
+  await expect(page.getByText(/Notes and full reference lists/)).toHaveCount(0)
+})
+
 test('the dev gallery renders component states', async ({ page }) => {
   await page.goto('/dev')
 

@@ -1,6 +1,6 @@
 import type { CrossrefWork } from './crossref'
 
-const LIBRARY_KEY = 'refs-workspace:library:v1'
+export const LIBRARY_KEY = 'refs-workspace:library:v1'
 const HISTORY_KEY = 'refs-workspace:search-history:v1'
 const HISTORY_LIMIT = 10
 export const LIBRARY_FILE_VERSION = 1
@@ -52,7 +52,7 @@ function isEntry(value: unknown): value is LibraryEntry {
 }
 
 /** Normalize an untrusted stored/imported entry and keep snapshots reference-free. */
-function normalizeEntry(entry: LibraryEntry): LibraryEntry {
+export function normalizeEntry(entry: LibraryEntry): LibraryEntry {
   return {
     doi: entry.doi,
     work: snapshotWork(entry.work),

@@ -32,7 +32,7 @@ export function WorkDetail({ doi, onBack, onOpenDoi, saved, isSaved, onSave }: P
       </button>
 
       {loading && (
-        <div className="detail-skeleton" aria-busy="true" aria-label="Loading paper">
+        <div className="detail-skeleton" role="status" aria-busy="true" aria-label="Loading paper">
           <div className="skeleton-line w-80" />
           <div className="skeleton-line w-50" />
           <div className="skeleton-line w-60" />
@@ -50,9 +50,9 @@ export function WorkDetail({ doi, onBack, onOpenDoi, saved, isSaved, onSave }: P
 
       {!loading && !error && work && (
         <article>
-          <h2 ref={heading} tabIndex={-1}>
+          <h1 ref={heading} tabIndex={-1}>
             {work.title?.[0] ?? work.subtitle?.[0] ?? `Untitled record (${work.DOI})`}
-          </h2>
+          </h1>
 
           {work.author && work.author.length > 0 && (
             <p className="detail-authors">{authorLine(work)}</p>

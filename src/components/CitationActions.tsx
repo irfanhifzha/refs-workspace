@@ -2,26 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import type { CrossrefWork } from '../lib/crossref'
 import type { CitationStyle } from '../lib/citations'
 import { CITATION_STYLES, formatCitation, toBibtex } from '../lib/citations'
+import { copyToClipboard } from '../lib/clipboard'
 
 type Copied = 'citation' | 'bibtex' | null
-
-async function copyToClipboard(text: string) {
-  if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text)
-    return
-  }
-
-  const area = document.createElement('textarea')
-  area.value = text
-  area.setAttribute('readonly', '')
-  area.style.position = 'fixed'
-  area.style.opacity = '0'
-  document.body.appendChild(area)
-  area.select()
-  const copied = document.execCommand('copy')
-  area.remove()
-  if (!copied) throw new Error('Copy failed')
-}
 
 function styleLabel(style: CitationStyle) {
   return CITATION_STYLES.find((option) => option.value === style)?.label ?? style

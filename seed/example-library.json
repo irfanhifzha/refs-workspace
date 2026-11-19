@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "exportedAt": "2026-11-19T00:00:00.000Z",
+  "entries": [
+    {
+      "doi": "10.1103/RevModPhys.20.367",
+      "work": {
+        "DOI": "10.1103/RevModPhys.20.367",
+        "title": ["Space-time approach to non-relativistic quantum mechanics"],
+        "author": [{ "given": "Richard P.", "family": "Feynman" }],
+        "container-title": ["Reviews of Modern Physics"],
+        "issued": { "date-parts": [[1948]] },
+        "type": "journal-article",
+        "volume": "20",
+        "issue": "2",
+        "page": "367-387"
+      },
+      "status": "reading",
+      "note": "The path-integral paper. Start with section 2 for the propagator argument.",
+      "addedAt": "2026-01-05T09:00:00.000Z"
+    },
+    {
+      "doi": "10.1103/RevModPhys.17.157",
+      "work": {
+        "DOI": "10.1103/RevModPhys.17.157",
+        "title": ["Interaction with the absorber as the mechanism of radiation"],
+        "author": [
+          { "given": "Richard P.", "family": "Feynman" },
+          { "given": "John A.", "family": "Wheeler" }
+        ],
+        "container-title": ["Reviews of Modern Physics"],
+        "issued": { "date-parts": [[1945]] },
+        "type": "journal-article",
+        "volume": "17",
+        "issue": "2-3",
+        "page": "157-181"
+      },
+      "status": "to-read",
+      "note": "Paired with the 1948 path-integral paper for the Wheeler-Feynman seminar.",
+      "addedAt": "2026-01-06T09:00:00.000Z"
+    },
+    {
+      "doi": "10.1002/j.1538-7305.1948.tb01338.x",
+      "work": {
+        "DOI": "10.1002/j.1538-7305.1948.tb01338.x",
+        "title": ["A mathematical theory of communication"],
+        "author": [{ "given": "Claude E.", "family": "Shannon" }],
+        "container-title": ["Bell System Technical Journal"],
+        "issued": { "date-parts": [[1948]] },
+        "type": "journal-article",
+        "volume": "27",
+        "issue": "3",
+        "page": "379-423"
+      },
+      "status": "done",
+      "note": "Reference example: entropy and channel capacity. Useful model for a clear methods section.",
+      "addedAt": "2026-01-07T09:00:00.000Z"
+    },
+    {
+      "doi": "10.1093/mind/LIX.236.433",
+      "work": {
+        "DOI": "10.1093/mind/LIX.236.433",
+        "title": ["Computing machinery and intelligence"],
+        "author": [{ "given": "Alan M.", "family": "Turing" }],
+        "container-title": ["Mind"],
+        "issued": { "date-parts": [[1950]] },
+        "type": "journal-article",
+        "volume": "LIX",
+        "issue": "236",
+        "page": "433-460"
+      },
+      "status": "to-read",
+      "note": "Try the imitation game section as a template for framing evaluation criteria.",
+      "addedAt": "2026-01-08T09:00:00.000Z"
+    },
+    {
+      "doi": "10.1002/andp.19053221004",
+      "work": {
+        "DOI": "10.1002/andp.19053221004",
+        "title": ["Zur Elektrodynamik bewegter Körper"],
+        "author": [{ "given": "Albert", "family": "Einstein" }],
+        "container-title": ["Annalen der Physik"],
+        "issued": { "date-parts": [[1905]] },
+        "type": "journal-article",
+        "volume": "322",
+        "issue": "10",
+        "page": "891-921"
+      },
+      "status": "to-read",
+      "note": "Non-English title: check how the app renders it and whether an English DOI record exists.",
+      "addedAt": "2026-01-09T09:00:00.000Z"
+    }
+  ]
+}
