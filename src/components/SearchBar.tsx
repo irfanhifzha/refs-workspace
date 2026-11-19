@@ -1,0 +1,21 @@
+type Props = {
+  value: string
+  onChange: (value: string) => void
+}
+
+export function SearchBar({ value, onChange }: Props) {
+  return (
+    <form className="search" role="search" onSubmit={(event) => event.preventDefault()}>
+      <input
+        type="search"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Title, author, or journal"
+        aria-label="Search papers on Crossref"
+        enterKeyHint="search"
+        autoComplete="off"
+        spellCheck={false}
+      />
+    </form>
+  )
+}
