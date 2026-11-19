@@ -24,6 +24,9 @@ export type SearchFilters = {
   from?: string
   to?: string
   type?: SearchType
+  abstract?: boolean
+  references?: boolean
+  fullText?: boolean
   sort: SearchSort
 }
 
@@ -31,6 +34,9 @@ export type SearchOptions = {
   from?: string
   to?: string
   type?: SearchType
+  abstract?: boolean
+  references?: boolean
+  fullText?: boolean
   sort?: SearchSort
 }
 
@@ -253,6 +259,9 @@ function buildSearchParams(
   if (options.from) filters.push(`from-pub-date:${options.from}-01-01`)
   if (options.to) filters.push(`until-pub-date:${options.to}-12-31`)
   if (options.type) filters.push(`type:${options.type}`)
+  if (options.abstract) filters.push('has-abstract:true')
+  if (options.references) filters.push('has-references:true')
+  if (options.fullText) filters.push('has-full-text:true')
   if (filters.length > 0) params.set('filter', filters.join(','))
 
   if (options.sort === 'newest') {

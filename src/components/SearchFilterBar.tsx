@@ -30,7 +30,17 @@ export function SearchFilterBar({ filters, onChange }: Props) {
   const [toDraft, setToDraft] = useState(filters.to ?? '')
 
   const hasFilters =
-    Boolean(filters.from) || Boolean(filters.to) || Boolean(filters.type) || filters.sort !== 'relevance'
+    Boolean(filters.from) ||
+    Boolean(filters.to) ||
+    Boolean(filters.type) ||
+    Boolean(filters.abstract) ||
+    Boolean(filters.references) ||
+    Boolean(filters.fullText) ||
+    filters.sort !== 'relevance'
+
+  function toggle(flag: 'abstract' | 'references' | 'fullText') {
+    onChange({ ...filters, [flag]: filters[flag] ? undefined : true })
+  }
 
   function commitYear(which: 'from' | 'to', raw: string) {
     const value = raw.trim()
@@ -114,6 +124,31 @@ export function SearchFilterBar({ filters, onChange }: Props) {
           </option>
         ))}
       </select>
+
+      <button
+        type="button"
+        className="filter-toggle"
+        aria-pressed={Boolean(filters.abstract)}
+        onClick={() => toggle('abstract')}
+      >
+        Has abstract
+      </button>
+      <button
+        type="button"
+        className="filter-toggle"
+        aria-pressed={Boolean(filters.references)}
+        onClick={() => toggle('references')}
+      >
+        Has references
+      </button>
+      <button
+        type="button"
+        className="filter-toggle"
+        aria-pressed={Boolean(filters.fullText)}
+        onClick={() => toggle('fullText')}
+      >
+        Has full-text link
+      </button>
 
       <select
         className="filter-input"

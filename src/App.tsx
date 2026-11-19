@@ -18,6 +18,9 @@ function App() {
     from: route.name === 'search' ? route.from : undefined,
     to: route.name === 'search' ? route.to : undefined,
     type: route.name === 'search' ? route.type : undefined,
+    abstract: route.name === 'search' ? route.abstract : undefined,
+    references: route.name === 'search' ? route.references : undefined,
+    fullText: route.name === 'search' ? route.fullText : undefined,
     sort: route.name === 'search' ? route.sort : 'relevance',
   })
   const library = useLibrary()
@@ -62,6 +65,9 @@ function App() {
           from: route.name === 'search' ? route.from : undefined,
           to: route.name === 'search' ? route.to : undefined,
           type: route.name === 'search' ? route.type : undefined,
+          abstract: route.name === 'search' ? route.abstract : undefined,
+          references: route.name === 'search' ? route.references : undefined,
+          fullText: route.name === 'search' ? route.fullText : undefined,
           sort: route.name === 'search' ? route.sort : 'relevance',
         },
         { replace: route.name === 'search' },
@@ -124,6 +130,9 @@ function App() {
                 from: route.from,
                 to: route.to,
                 type: route.type,
+                abstract: route.abstract,
+                references: route.references,
+                fullText: route.fullText,
                 sort: route.sort,
               }}
               search={search}

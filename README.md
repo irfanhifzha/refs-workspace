@@ -9,7 +9,8 @@ Planning and status live in [`plan.md`](./plan.md).
 ## What it does
 
 - Search Crossref papers by title, author, or journal on Enter, with load-more paging.
-- Narrow results by publication year and type, and sort by relevance, date, or citation count.
+- Narrow results by publication year, type, and metadata availability (abstract, references,
+  full-text link), and sort by relevance, date, or citation count.
 - Re-run recent searches from a local history (last 10).
 - Open a paper for full metadata, abstract, and its deposited reference list; follow DOI-carrying
   references into the app or out to doi.org.
@@ -35,6 +36,8 @@ What that means in practice:
   requests; one deliberate search costs one.
 - **List responses fetch metadata only.** The `select` parameter excludes references, licenses, and
   links, keeping each response small.
+- **Availability filters stay server-side.** Abstract, references, and full-text-link filters are
+  Crossref `has-*` filters, so narrowing a search costs no extra requests.
 - **One paper at a time.** A detail record is fetched only when a paper is opened, never preloaded in
   the background.
 - **Everything is cached in memory**, keyed by the full search criteria (query, year range, type,
@@ -83,9 +86,9 @@ marked **[learning]** is a skill this project would pick up along the way. Every
 against the API-usage philosophy above: anything that multiplies requests needs caching and a queue
 before it ships.
 
-Recently shipped: Enter-to-search, URL routing for all three views, filters and sorting, local search
-history, opt-in related papers, JSON library import/export, and reference-free library snapshots
-(references are re-fetched on the detail screen).
+Recently shipped: Enter-to-search, URL routing for all three views, filters and sorting,
+metadata-availability filters, local search history, opt-in related papers, JSON library
+import/export, and reference-free library snapshots (references are re-fetched on the detail screen).
 
 ### Near-term (the obvious next steps)
 

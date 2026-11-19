@@ -8,6 +8,9 @@ export type Route =
       from?: string
       to?: string
       type?: SearchType
+      abstract?: boolean
+      references?: boolean
+      fullText?: boolean
       sort: SearchSort
     }
   | { name: 'library' }
@@ -35,6 +38,11 @@ function readType(raw: string | null): SearchType | undefined {
 function readSort(raw: string | null): SearchSort {
   const value = (raw ?? '').trim()
   return SEARCH_SORTS.includes(value as SearchSort) ? (value as SearchSort) : 'relevance'
+}
+
+function readFlag(raw: string | null): boolean | undefined {
+  const value = (raw ?? '').trim()
+  return value === '1' || value === 'true' ? true : undefined
 }
 
 /** Ensure the current entry has our depth marker so in-app back is detectable. */
@@ -65,6 +73,9 @@ export function readRoute(
     from: readYear(params.get('from')),
     to: readYear(params.get('to')),
     type: readType(params.get('type')),
+    abstract: readFlag(params.get('abstract')),
+    references: readFlag(params.get('references')),
+    fullText: readFlag(params.get('fulltext')),
     sort: readSort(params.get('sort')),
   }
 }
@@ -81,6 +92,9 @@ export function routeHref(route: Route): string {
       if (route.from) params.set('from', route.from)
       if (route.to) params.set('to', route.to)
       if (route.type) params.set('type', route.type)
+      if (route.abstract) params.set('abstract', '1')
+      if (route.references) params.set('references', '1')
+      if (route.fullText) params.set('fulltext', '1')
       if (route.sort !== 'relevance') params.set('sort', route.sort)
       const search = params.toString()
       return search ? `/?${search}` : '/'

@@ -30,6 +30,9 @@ function criteriaKey(query: string, options: SearchOptions): string {
     options.from ?? '',
     options.to ?? '',
     options.type ?? '',
+    options.abstract ? 'abstract' : '',
+    options.references ? 'references' : '',
+    options.fullText ? 'fulltext' : '',
     options.sort ?? 'relevance',
   ].join('|')
 }
@@ -41,14 +44,22 @@ export type CrossrefSearch = SearchState & {
 }
 
 export function useCrossrefSearch(query: string, options: SearchOptions = {}): CrossrefSearch {
-  const { from, to, type, sort } = options
+  const { from, to, type, abstract, references, fullText, sort } = options
   const [state, setState] = useState<SearchState>(EMPTY)
   const [attempt, setAttempt] = useState(0)
   const requestId = useRef(0)
   const moreController = useRef<AbortController | null>(null)
 
   const trimmed = query.trim()
-  const key = criteriaKey(trimmed, { from, to, type, sort })
+  const key = criteriaKey(trimmed, {
+    from,
+    to,
+    type,
+    abstract,
+    references,
+    fullText,
+    sort,
+  })
 
   // Results for a previous query or filter set are stale: show the skeleton instead.
   const current: SearchState =
@@ -67,7 +78,7 @@ export function useCrossrefSearch(query: string, options: SearchOptions = {}): C
 
     if (q.length < MIN_QUERY_LENGTH) return
 
-    const criteria = { from, to, type, sort }
+    const criteria = { from, to, type, abstract, references, fullText, sort }
     const criteriaId = criteriaKey(q, criteria)
     const controller = new AbortController()
     searchWorks(q, 0, criteria, controller.signal)
@@ -89,7 +100,7 @@ export function useCrossrefSearch(query: string, options: SearchOptions = {}): C
       })
 
     return () => controller.abort()
-  }, [query, from, to, type, sort, attempt])
+  }, [query, from, to, type, abstract, references, fullText, sort, attempt])
 
   const itemCount = current.items.length
   const total = current.total
@@ -106,7 +117,7 @@ export function useCrossrefSearch(query: string, options: SearchOptions = {}): C
       return
     }
 
-    const criteria = { from, to, type, sort }
+    const criteria = { from, to, type, abstract, references, fullText, sort }
     const criteriaId = criteriaKey(trimmed, criteria)
     const id = requestId.current
     moreController.current?.abort()
@@ -146,17 +157,38 @@ export function useCrossrefSearch(query: string, options: SearchOptions = {}): C
             : prev,
         )
       })
-  }, [trimmed, from, to, type, sort, itemCount, total, loading, loadingMore])
+  }, [
+    trimmed,
+    from,
+    to,
+    type,
+    abstract,
+    references,
+    fullText,
+    sort,
+    itemCount,
+    total,
+    loading,
+    loadingMore,
+  ])
 
   const retry = useCallback(() => {
     setState({
       ...EMPTY,
-      key: criteriaKey(trimmed, { from, to, type, sort }),
+      key: criteriaKey(trimmed, {
+        from,
+        to,
+        type,
+        abstract,
+        references,
+        fullText,
+        sort,
+      }),
       query: trimmed,
       loading: trimmed.length >= MIN_QUERY_LENGTH,
     })
     setAttempt((value) => value + 1)
-  }, [trimmed, from, to, type, sort])
+  }, [trimmed, from, to, type, abstract, references, fullText, sort])
 
   return {
     key: current.key,

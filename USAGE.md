@@ -72,11 +72,28 @@ requests fetch the full record because references are only available there.
   showing results for a query you no longer have searched.
 - **Repeated submissions are cached.** Re-submitting the same query (or navigating back to it) is
   served from memory without another request.
-- **Filters and sort are part of the search.** Changing a year, type, or sort control immediately
-  re-runs the current query with the new criteria; each change can cost one request. Changing a
-  filter with a query shorter than 3 characters costs nothing.
+- **Filters and sort are part of the search.** Changing a year, type, availability toggle, or sort
+  control immediately re-runs the current query with the new criteria; each change can cost one
+  request. Changing a filter with a query shorter than 3 characters costs nothing.
 - **Related papers are opt-in.** Opening a detail page does not fetch them; the "Find related papers"
   button issues one title/author search and caches the result by DOI for the session.
+
+### Search filters
+
+Filters are sent to Crossref as a single comma-separated `filter` parameter and AND-ed together:
+
+| Control | Crossref filter |
+|---|---|
+| From year | `from-pub-date:YYYY-01-01` |
+| To year | `until-pub-date:YYYY-12-31` |
+| Publication type | `type:journal-article` (or another `/types` value) |
+| Has abstract | `has-abstract:true` |
+| Has references | `has-references:true` |
+| Has full-text link | `has-full-text:true` |
+
+"Has full-text link" means the deposited metadata includes a full-text `<resource>` link; it is not a
+promise that the text is free to read. Every filter stays server-side, so adding one does not add a
+request.
 
 ### While paging
 
