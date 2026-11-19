@@ -4,11 +4,11 @@ A small web app for learning web development **and** for researching: search sch
 Crossref API, read their metadata, follow their references, and keep a personal library of what you're
 reading.
 
-Status: MVP implemented. M1–M4 complete, M5 mostly complete. M6 partially done: URL routing and
-library JSON import/export shipped; related papers, cited-by, and tests remain. Switched from live
-(debounced) search to Enter-to-search. Still unverified: the rendered layout at 320/768/1440 px,
-Lighthouse scores, and a click-through of search → paper → library. M1's temporary probe was skipped
-in favor of building the real search UI in M2.
+Status: MVP implemented. M1–M4 complete, M5 mostly complete. M6 partially done: URL routing, library
+JSON import/export, search filters/sorting, local search history, and opt-in related papers shipped;
+cited-by and tests remain. Switched from live (debounced) search to Enter-to-search. Still unverified:
+the rendered layout at 320/768/1440 px, Lighthouse scores, and a click-through of search → paper →
+library. M1's temporary probe was skipped in favor of building the real search UI in M2.
 
 ---
 
@@ -265,7 +265,7 @@ Each milestone ends in something runnable and is a deliberate learning step.
 ### M6 — Stretch (optional)
 - [x] URL routing for search/paper/library (`?q=`, `/library`, `/paper?doi=`) with the History API.
 - [x] Library JSON import/export with DOI dedupe, and reference-free snapshots.
-- [ ] Related papers via shared references.
+- [x] Related papers via one opt-in title/author Crossref search (approximate, cached by DOI).
 - [ ] Cited-by via OpenCitations if it proves worthwhile.
 - [ ] Minimal tests with Vitest for normalizers and citation formatters.
 

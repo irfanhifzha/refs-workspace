@@ -9,12 +9,15 @@ Planning and status live in [`plan.md`](./plan.md).
 ## What it does
 
 - Search Crossref papers by title, author, or journal on Enter, with load-more paging.
+- Narrow results by publication year and type, and sort by relevance, date, or citation count.
+- Re-run recent searches from a local history (last 10).
 - Open a paper for full metadata, abstract, and its deposited reference list; follow DOI-carrying
   references into the app or out to doi.org.
 - Save papers to a local library, track `To read` / `Reading` / `Done`, and attach notes.
 - Copy an approximate APA citation or BibTeX, and export the whole library as a `.bib` file.
+- Ask for related papers on a detail page — one opt-in Crossref request, cached by DOI.
 - Back up and restore the library as JSON, merging imports by DOI.
-- Keep every view in the URL — `/` (with `?q=`), `/library`, and `/paper?doi=…` — so reloads,
+- Keep every view and every search criterion in the URL — `/` (with `?q=`), `/library`, and `/paper?doi=…` — so reloads,
   bookmarks, and back/forward navigation work.
 
 No backend, no account, no runtime dependencies beyond React.
@@ -34,8 +37,10 @@ What that means in practice:
   links, keeping each response small.
 - **One paper at a time.** A detail record is fetched only when a paper is opened, never preloaded in
   the background.
-- **Everything is cached in memory**, keyed by `query|offset` and DOI, so back/forward navigation,
-  repeated queries, and re-opening a paper cost nothing.
+- **Everything is cached in memory**, keyed by the full search criteria (query, year range, type,
+  sort) and DOI, so back/forward navigation, repeated queries, and re-opening a paper cost nothing.
+- **Related papers are opt-in.** The detail page only searches for similar work when asked, uses a
+  single title/author query, and caches the result by DOI.
 - **The polite pool is expected.** Set `VITE_CROSSREF_MAILTO`; it raises the limit and gives Crossref
   a way to contact you instead of silently throttling.
 - **Limits are never worked around.** No auto-retry loops, no parallel firehose, no rotating emails, no
@@ -78,8 +83,9 @@ marked **[learning]** is a skill this project would pick up along the way. Every
 against the API-usage philosophy above: anything that multiplies requests needs caching and a queue
 before it ships.
 
-Recently shipped: Enter-to-search, URL routing for all three views, JSON library import/export, and
-reference-free library snapshots (references are re-fetched on the detail screen).
+Recently shipped: Enter-to-search, URL routing for all three views, filters and sorting, local search
+history, opt-in related papers, JSON library import/export, and reference-free library snapshots
+(references are re-fetched on the detail screen).
 
 ### Near-term (the obvious next steps)
 
@@ -99,17 +105,16 @@ reference-free library snapshots (references are re-fetched on the detail screen
 
 ### Search and discovery
 
-- **Filters** on the existing `/works` endpoint: year range, type (article, book chapter, proceedings),
-  publisher, and open-access status. Then facet chips so filters are visible and removable.
-- **Sorting**: relevance (default), newest, oldest, most cited (`is-referenced-by-count`).
+- **More filters** — publisher, open-access status, and language, with removable facet chips.
 - **Author and journal jumps** — click an author to search their works; click a journal to browse
   `GET /journals/<issn>/works`.
-- **Saved searches** with a name, so recurring topics are one click away.
-- **Search history** with keyboard recall, stored locally.
+- **Saved searches** with a name (beyond the anonymous recent-history list), so recurring topics are
+  one click away.
+- **Keyboard recall** for search history (arrow keys through recent queries).
 - **"Cited by" section** — Crossref can't do it, but OpenCitations and OpenAlex can. This was already
   a non-goal; it is the single biggest missing feature for research. **[learning: a second API, ID mapping]**
-- **Related / similar papers** — score by shared references, shared authors, or shared subject terms.
-  A purely local computation over records already fetched is a nice constrained problem.
+- **Better related papers** — the current version is a title/author search; scoring by shared
+  references or subject terms would be sharper, if the extra data can be fetched politely.
 - **Frontier / citation graph view** — a small canvas or SVG graph of papers and reference edges,
   clickable to navigate. Fun, visual, and hard in the right way. **[learning: data viz]**
 - **Fallback sources** when Crossref has no abstract or references: OpenAlex, Semantic Scholar, arXiv,

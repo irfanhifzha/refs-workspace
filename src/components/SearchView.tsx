@@ -1,19 +1,35 @@
 import { useState } from 'react'
 import type { CrossrefSearch } from '../hooks/useCrossrefSearch'
+import type { SearchFilters } from '../lib/crossref'
 import { SearchBar } from './SearchBar'
+import { SearchFilterBar } from './SearchFilterBar'
 import { WorkCard } from './WorkCard'
 
 type Props = {
   query: string
+  filters: SearchFilters
   search: CrossrefSearch
+  history: string[]
   onSubmit: (value: string) => void
+  onFiltersChange: (filters: SearchFilters) => void
+  onClearHistory: () => void
   onOpen: (doi: string) => void
   isSaved: (doi: string) => boolean
 }
 
 const MIN_QUERY_LENGTH = 3
 
-export function SearchView({ query, search, onSubmit, onOpen, isSaved }: Props) {
+export function SearchView({
+  query,
+  filters,
+  search,
+  history,
+  onSubmit,
+  onFiltersChange,
+  onClearHistory,
+  onOpen,
+  isSaved,
+}: Props) {
   // Remounted by App when the URL query changes, so this tracks the submitted query.
   const [draft, setDraft] = useState(query)
   const submitted = search.query.trim()
@@ -27,6 +43,35 @@ export function SearchView({ query, search, onSubmit, onOpen, isSaved }: Props) 
   return (
     <div>
       <SearchBar value={draft} onChange={setDraft} onSubmit={onSubmit} />
+
+      <SearchFilterBar
+        key={`${filters.from ?? ''}|${filters.to ?? ''}|${filters.type ?? ''}|${filters.sort}`}
+        filters={filters}
+        onChange={onFiltersChange}
+      />
+
+      {showIntro && history.length > 0 && (
+        <section className="history" aria-label="Recent searches">
+          <div className="history-head">
+            <span className="history-title">Recent searches</span>
+            <button type="button" className="btn btn-ghost" onClick={onClearHistory}>
+              Clear
+            </button>
+          </div>
+          <div className="history-list">
+            {history.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="history-item"
+                onClick={() => onSubmit(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {showMinHint && <p className="hint">Type at least {MIN_QUERY_LENGTH} characters to search.</p>}
 

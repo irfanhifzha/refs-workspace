@@ -3,16 +3,18 @@ import { authorLine, doiUrl, parseYear, typeLabel } from '../lib/crossref'
 import { useWork } from '../hooks/useWork'
 import { CitationActions } from './CitationActions'
 import { ReferenceList } from './ReferenceList'
+import { RelatedPapers } from './RelatedPapers'
 
 type Props = {
   doi: string
   onBack: () => void
   onOpenDoi: (doi: string) => void
   saved: boolean
+  isSaved: (doi: string) => boolean
   onSave: (work: CrossrefWork) => void
 }
 
-export function WorkDetail({ doi, onBack, onOpenDoi, saved, onSave }: Props) {
+export function WorkDetail({ doi, onBack, onOpenDoi, saved, isSaved, onSave }: Props) {
   const { work, loading, error, retry } = useWork(doi)
 
   return (
@@ -120,6 +122,8 @@ export function WorkDetail({ doi, onBack, onOpenDoi, saved, onSave }: Props) {
           )}
 
           <ReferenceList references={work.reference} onOpenDoi={onOpenDoi} />
+
+          <RelatedPapers work={work} isSaved={isSaved} onOpenDoi={onOpenDoi} />
         </article>
       )}
     </div>

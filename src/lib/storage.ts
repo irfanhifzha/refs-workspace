@@ -1,6 +1,8 @@
 import type { CrossrefWork } from './crossref'
 
 const LIBRARY_KEY = 'refs-workspace:library:v1'
+const HISTORY_KEY = 'refs-workspace:search-history:v1'
+const HISTORY_LIMIT = 10
 export const LIBRARY_FILE_VERSION = 1
 
 export const STATUSES = ['to-read', 'reading', 'done'] as const
@@ -122,4 +124,38 @@ export function parseLibraryJson(text: string): LibraryEntry[] {
     throw new Error('No valid library entries were found in that file.')
   }
   return entries
+}
+
+export function loadSearchHistory(): string[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter((value) => value.length >= 3)
+      .slice(0, HISTORY_LIMIT)
+  } catch {
+    return []
+  }
+}
+
+export function saveSearchHistory(queries: string[]) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(queries.slice(0, HISTORY_LIMIT)))
+  } catch {
+    // Storage full or unavailable; history is a convenience, not required data.
+  }
+}
+
+export function rememberSearch(queries: string[], query: string): string[] {
+  const value = query.trim()
+  if (value.length < 3) return queries
+  const next = [
+    value,
+    ...queries.filter((item) => item.toLowerCase() !== value.toLowerCase()),
+  ]
+  return next.slice(0, HISTORY_LIMIT)
 }

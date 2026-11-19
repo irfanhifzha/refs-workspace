@@ -41,12 +41,15 @@ dodge limits is explicitly discouraged by Crossref.
 | Action | Requests | Cache |
 |---|---|---|
 | Typing in the search box | 0 — the input is local until you press Enter | — |
-| Submitting a search (Enter) | 1, once the query is 3+ characters | Search page cached by `query|offset` |
+| Submitting a search (Enter) | 1, once the query is 3+ characters | Search page cached by the full criteria |
+| Changing a filter or sort | 1 per change, once the query is 3+ characters | Search page cached by the full criteria |
 | Dismissing a search (under 3 chars, clearing) | 0 | — |
+| Re-running a recent search | 0 if the criteria are still cached; otherwise 1 | `localStorage` list, plus the memory cache |
 | "Load more" | 1 | Next offset cached |
 | Opening a paper from results | 1 — the list record lacks references, so the detail view fetches the full record | Detail cached by DOI |
 | Opening a paper from a reference or the library | 1 (unless already cached) | Detail cached by DOI |
-| Clicking between search and library | 0 | Returning to the same `?q=` is served from the search cache |
+| Clicking "Find related papers" | 1 per paper, only when clicked | Related results cached by DOI |
+| Clicking between search and library | 0 | Returning to the same search URL is served from the search cache |
 | Saving / removing / editing notes | 0 | `localStorage` only |
 | Copying a citation / exporting BibTeX | 0 | Local formatting only |
 
@@ -69,6 +72,11 @@ requests fetch the full record because references are only available there.
   showing results for a query you no longer have searched.
 - **Repeated submissions are cached.** Re-submitting the same query (or navigating back to it) is
   served from memory without another request.
+- **Filters and sort are part of the search.** Changing a year, type, or sort control immediately
+  re-runs the current query with the new criteria; each change can cost one request. Changing a
+  filter with a query shorter than 3 characters costs nothing.
+- **Related papers are opt-in.** Opening a detail page does not fetch them; the "Find related papers"
+  button issues one title/author search and caches the result by DOI for the session.
 
 ### While paging
 
@@ -79,10 +87,11 @@ requests fetch the full record because references are only available there.
 
 ### Caching
 
-`src/lib/crossref.ts` keeps two in-memory maps:
+`src/lib/crossref.ts` keeps three in-memory maps:
 
-- search pages keyed by `query|offset`
+- search pages keyed by the complete criteria (query, year range, type, sort, offset)
 - works keyed by lowercase DOI
+- related-paper results keyed by lowercase DOI
 
 Each map is capped at **80 entries** and evicts the oldest insertion. Opening a paper again, or
 returning to an earlier search page, is served from memory. The cache is per page load: a refresh or a

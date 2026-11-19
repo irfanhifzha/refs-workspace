@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { LibraryView } from './components/LibraryView'
 import { SearchView } from './components/SearchView'
@@ -6,18 +6,30 @@ import { WorkDetail } from './components/WorkDetail'
 import { useCrossrefSearch } from './hooks/useCrossrefSearch'
 import { useLibrary } from './hooks/useLibrary'
 import { useRoute } from './hooks/useRoute'
+import type { SearchFilters } from './lib/crossref'
 import { goBack, initializeRouter, navigate } from './lib/router'
+import { loadSearchHistory, rememberSearch, saveSearchHistory } from './lib/storage'
 import './App.css'
 
 function App() {
   const route = useRoute()
   const searchQuery = route.name === 'search' ? route.query : ''
-  const search = useCrossrefSearch(searchQuery)
+  const search = useCrossrefSearch(searchQuery, {
+    from: route.name === 'search' ? route.from : undefined,
+    to: route.name === 'search' ? route.to : undefined,
+    type: route.name === 'search' ? route.type : undefined,
+    sort: route.name === 'search' ? route.sort : 'relevance',
+  })
   const library = useLibrary()
+  const [history, setHistory] = useState(loadSearchHistory)
 
   useEffect(() => {
     initializeRouter()
   }, [])
+
+  useEffect(() => {
+    saveSearchHistory(history)
+  }, [history])
 
   useEffect(() => {
     window.scrollTo({ top: 0 })
@@ -28,22 +40,51 @@ function App() {
   }, [])
 
   const back = useCallback(() => {
-    goBack({ name: 'search', query: '' })
+    goBack({ name: 'search', query: '', sort: 'relevance' })
   }, [])
 
   const openTab = useCallback((tab: 'search' | 'library') => {
-    navigate(tab === 'search' ? { name: 'search', query: '' } : { name: 'library' })
+    navigate(
+      tab === 'search' ? { name: 'search', query: '', sort: 'relevance' } : { name: 'library' },
+    )
   }, [])
 
   const submitSearch = useCallback(
     (value: string) => {
       const query = value.trim()
+      setHistory((current) => rememberSearch(current, query))
       if (route.name === 'search' && route.query === query) return
       // Refining a search should not fill the back button with old queries.
-      navigate({ name: 'search', query }, { replace: route.name === 'search' })
+      navigate(
+        {
+          name: 'search',
+          query,
+          from: route.name === 'search' ? route.from : undefined,
+          to: route.name === 'search' ? route.to : undefined,
+          type: route.name === 'search' ? route.type : undefined,
+          sort: route.name === 'search' ? route.sort : 'relevance',
+        },
+        { replace: route.name === 'search' },
+      )
     },
     [route],
   )
+
+  const updateFilters = useCallback(
+    (filters: SearchFilters) => {
+      navigate(
+        {
+          name: 'search',
+          query: route.name === 'search' ? route.query : '',
+          ...filters,
+        },
+        { replace: true },
+      )
+    },
+    [route],
+  )
+
+  const clearHistory = useCallback(() => setHistory([]), [])
 
   return (
     <div className="app">
@@ -79,8 +120,17 @@ function App() {
             <SearchView
               key={searchQuery}
               query={searchQuery}
+              filters={{
+                from: route.from,
+                to: route.to,
+                type: route.type,
+                sort: route.sort,
+              }}
               search={search}
+              history={history}
               onSubmit={submitSearch}
+              onFiltersChange={updateFilters}
+              onClearHistory={clearHistory}
               onOpen={openPaper}
               isSaved={library.isSaved}
             />
@@ -104,6 +154,7 @@ function App() {
               onBack={back}
               onOpenDoi={openPaper}
               saved={library.isSaved(route.doi)}
+              isSaved={library.isSaved}
               onSave={library.add}
             />
           )}

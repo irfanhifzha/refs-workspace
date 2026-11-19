@@ -5,6 +5,35 @@ const MAILTO = (import.meta.env.VITE_CROSSREF_MAILTO ?? '').trim()
 
 export const PAGE_SIZE = 20
 
+export const SEARCH_SORTS = ['relevance', 'newest', 'oldest', 'cited'] as const
+export type SearchSort = (typeof SEARCH_SORTS)[number]
+
+export const SEARCH_TYPES = [
+  'journal-article',
+  'book-chapter',
+  'proceedings-article',
+  'posted-content',
+  'book',
+  'dataset',
+  'report',
+  'dissertation',
+] as const
+export type SearchType = (typeof SEARCH_TYPES)[number]
+
+export type SearchFilters = {
+  from?: string
+  to?: string
+  type?: SearchType
+  sort: SearchSort
+}
+
+export type SearchOptions = {
+  from?: string
+  to?: string
+  type?: SearchType
+  sort?: SearchSort
+}
+
 const LIST_SELECT = [
   'DOI',
   'title',
@@ -95,6 +124,7 @@ export class CrossrefError extends Error {
 
 const searchCache = new Map<string, SearchPage>()
 const workCache = new Map<string, CrossrefWork>()
+const relatedCache = new Map<string, CrossrefWork[]>()
 
 function remember<K, V>(cache: Map<K, V>, key: K, value: V) {
   if (cache.size >= 80) {
@@ -207,31 +237,97 @@ export function normalizeWork(raw: CrossrefWork): CrossrefWork {
   }
 }
 
+function buildSearchParams(
+  query: string,
+  offset: number,
+  options: SearchOptions,
+): URLSearchParams {
+  const params = new URLSearchParams({
+    'query.bibliographic': query.trim(),
+    rows: String(PAGE_SIZE),
+    offset: String(offset),
+    select: LIST_SELECT,
+  })
+
+  const filters: string[] = []
+  if (options.from) filters.push(`from-pub-date:${options.from}-01-01`)
+  if (options.to) filters.push(`until-pub-date:${options.to}-12-31`)
+  if (options.type) filters.push(`type:${options.type}`)
+  if (filters.length > 0) params.set('filter', filters.join(','))
+
+  if (options.sort === 'newest') {
+    params.set('sort', 'published')
+    params.set('order', 'desc')
+  } else if (options.sort === 'oldest') {
+    params.set('sort', 'published')
+    params.set('order', 'asc')
+  } else if (options.sort === 'cited') {
+    params.set('sort', 'is-referenced-by-count')
+    params.set('order', 'desc')
+  }
+
+  return params
+}
+
 export async function searchWorks(
   query: string,
   offset: number,
+  options: SearchOptions = {},
   signal?: AbortSignal,
 ): Promise<SearchPage> {
-  const key = `${query.trim().toLowerCase()}|${offset}`
+  const params = buildSearchParams(query, offset, options)
+  const key = params.toString()
   const cached = searchCache.get(key)
   if (cached) return cached
 
-  const params = withMailto(
-    new URLSearchParams({
-      'query.bibliographic': query.trim(),
-      rows: String(PAGE_SIZE),
-      offset: String(offset),
-      select: LIST_SELECT,
-    }),
+  const data = await request<CrossrefListResponse>(
+    `/works?${withMailto(params).toString()}`,
+    signal,
   )
-
-  const data = await request<CrossrefListResponse>(`/works?${params.toString()}`, signal)
   const page: SearchPage = {
     items: (data.message.items ?? []).map(normalizeWork),
     total: data.message['total-results'] ?? 0,
   }
   remember(searchCache, key, page)
   return page
+}
+
+/**
+ * Approximate related papers with one title/author search. Opt-in from the detail view and cached by
+ * DOI, so opening the same paper again costs nothing.
+ */
+export async function findRelatedWorks(
+  work: CrossrefWork,
+  signal?: AbortSignal,
+): Promise<CrossrefWork[]> {
+  const key = work.DOI.toLowerCase()
+  const cached = relatedCache.get(key)
+  if (cached) return cached
+
+  const title = work.title?.[0] ?? work.subtitle?.[0]
+  if (!title) {
+    remember(relatedCache, key, [])
+    return []
+  }
+
+  const author = work.author?.[0]?.family
+  const query = [title, author].filter(Boolean).join(' ').slice(0, 240)
+  const params = withMailto(
+    new URLSearchParams({
+      'query.bibliographic': query,
+      rows: '8',
+      select: LIST_SELECT,
+    }),
+  )
+
+  const data = await request<CrossrefListResponse>(`/works?${params.toString()}`, signal)
+  const items = (data.message.items ?? [])
+    .map(normalizeWork)
+    .filter((item) => item.DOI.toLowerCase() !== key && item.title?.[0])
+    .slice(0, 5)
+
+  remember(relatedCache, key, items)
+  return items
 }
 
 export function getCachedWork(doi: string): CrossrefWork | undefined {
