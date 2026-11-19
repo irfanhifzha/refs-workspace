@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CrossrefWork } from '../lib/crossref'
 import { errorMessage, isAbortError, searchWorks } from '../lib/crossref'
 
-const DEBOUNCE_MS = 450
 const MIN_QUERY_LENGTH = 3
 
 type SearchState = {
@@ -23,7 +22,7 @@ const EMPTY: SearchState = {
   error: null,
 }
 
-export type CrossrefSearch = Omit<SearchState, 'query'> & {
+export type CrossrefSearch = SearchState & {
   hasMore: boolean
   loadMore: () => void
   retry: () => void
@@ -55,29 +54,24 @@ export function useCrossrefSearch(query: string): CrossrefSearch {
     if (q.length < MIN_QUERY_LENGTH) return
 
     const controller = new AbortController()
-    const timer = window.setTimeout(() => {
-      searchWorks(q, 0, controller.signal)
-        .then((page) => {
-          if (id !== requestId.current) return
-          setState({
-            query: q,
-            items: page.items,
-            total: page.total,
-            loading: false,
-            loadingMore: false,
-            error: null,
-          })
+    searchWorks(q, 0, controller.signal)
+      .then((page) => {
+        if (id !== requestId.current) return
+        setState({
+          query: q,
+          items: page.items,
+          total: page.total,
+          loading: false,
+          loadingMore: false,
+          error: null,
         })
-        .catch((error: unknown) => {
-          if (isAbortError(error) || id !== requestId.current) return
-          setState({ ...EMPTY, query: q, error: errorMessage(error) })
-        })
-    }, DEBOUNCE_MS)
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error) || id !== requestId.current) return
+        setState({ ...EMPTY, query: q, error: errorMessage(error) })
+      })
 
-    return () => {
-      window.clearTimeout(timer)
-      controller.abort()
-    }
+    return () => controller.abort()
   }, [query, attempt])
 
   const itemCount = current.items.length
@@ -142,6 +136,7 @@ export function useCrossrefSearch(query: string): CrossrefSearch {
   }, [trimmed])
 
   return {
+    query: current.query,
     items: current.items,
     total: current.total,
     loading: current.loading,

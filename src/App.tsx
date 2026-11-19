@@ -1,42 +1,49 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { LibraryView } from './components/LibraryView'
 import { SearchView } from './components/SearchView'
 import { WorkDetail } from './components/WorkDetail'
 import { useCrossrefSearch } from './hooks/useCrossrefSearch'
 import { useLibrary } from './hooks/useLibrary'
+import { useRoute } from './hooks/useRoute'
+import { goBack, initializeRouter, navigate } from './lib/router'
 import './App.css'
 
-type View =
-  | { name: 'search' }
-  | { name: 'library' }
-  | { name: 'paper'; doi: string }
-
 function App() {
-  const [stack, setStack] = useState<View[]>([{ name: 'search' }])
-  const [query, setQuery] = useState('')
-  const search = useCrossrefSearch(query)
+  const route = useRoute()
+  const searchQuery = route.name === 'search' ? route.query : ''
+  const search = useCrossrefSearch(searchQuery)
   const library = useLibrary()
 
-  const view: View = stack[stack.length - 1] ?? { name: 'search' }
+  useEffect(() => {
+    initializeRouter()
+  }, [])
 
   useEffect(() => {
     window.scrollTo({ top: 0 })
-  }, [stack])
+  }, [route])
 
   const openPaper = useCallback((doi: string) => {
-    setStack((current) => [...current, { name: 'paper', doi }])
+    navigate({ name: 'paper', doi })
   }, [])
 
   const back = useCallback(() => {
-    setStack((current) =>
-      current.length > 1 ? current.slice(0, -1) : [{ name: 'search' }],
-    )
+    goBack({ name: 'search', query: '' })
   }, [])
 
   const openTab = useCallback((tab: 'search' | 'library') => {
-    setStack([tab === 'search' ? { name: 'search' } : { name: 'library' }])
+    navigate(tab === 'search' ? { name: 'search', query: '' } : { name: 'library' })
   }, [])
+
+  const submitSearch = useCallback(
+    (value: string) => {
+      const query = value.trim()
+      if (route.name === 'search' && route.query === query) return
+      // Refining a search should not fill the back button with old queries.
+      navigate({ name: 'search', query }, { replace: route.name === 'search' })
+    },
+    [route],
+  )
 
   return (
     <div className="app">
@@ -48,14 +55,14 @@ function App() {
         <nav className="nav" aria-label="Main">
           <button
             type="button"
-            aria-current={view.name === 'search' ? 'page' : undefined}
+            aria-current={route.name === 'search' ? 'page' : undefined}
             onClick={() => openTab('search')}
           >
             Search
           </button>
           <button
             type="button"
-            aria-current={view.name === 'library' ? 'page' : undefined}
+            aria-current={route.name === 'library' ? 'page' : undefined}
             onClick={() => openTab('library')}
           >
             Library
@@ -68,33 +75,35 @@ function App() {
 
       <main className="app-main">
         <ErrorBoundary>
-          {view.name === 'search' && (
+          {route.name === 'search' && (
             <SearchView
-              query={query}
+              key={searchQuery}
+              query={searchQuery}
               search={search}
-              onQueryChange={setQuery}
+              onSubmit={submitSearch}
               onOpen={openPaper}
               isSaved={library.isSaved}
             />
           )}
 
-          {view.name === 'library' && (
+          {route.name === 'library' && (
             <LibraryView
               entries={library.entries}
               onOpen={openPaper}
               onRemove={library.remove}
               onStatus={library.setStatus}
               onNote={library.setNote}
+              onImport={library.importEntries}
             />
           )}
 
-          {view.name === 'paper' && (
+          {route.name === 'paper' && (
             <WorkDetail
-              key={view.doi}
-              doi={view.doi}
+              key={route.doi}
+              doi={route.doi}
               onBack={back}
               onOpenDoi={openPaper}
-              saved={library.isSaved(view.doi)}
+              saved={library.isSaved(route.doi)}
               onSave={library.add}
             />
           )}

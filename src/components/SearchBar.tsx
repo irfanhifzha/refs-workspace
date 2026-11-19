@@ -1,11 +1,19 @@
 type Props = {
   value: string
   onChange: (value: string) => void
+  onSubmit: (value: string) => void
 }
 
-export function SearchBar({ value, onChange }: Props) {
+export function SearchBar({ value, onChange, onSubmit }: Props) {
   return (
-    <form className="search" role="search" onSubmit={(event) => event.preventDefault()}>
+    <form
+      className="search"
+      role="search"
+      onSubmit={(event) => {
+        event.preventDefault()
+        onSubmit(value)
+      }}
+    >
       <input
         type="search"
         value={value}

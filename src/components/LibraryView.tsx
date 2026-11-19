@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import type { LibraryEntry, ReadingStatus } from '../lib/storage'
-import { STATUSES, STATUS_LABELS } from '../lib/storage'
+import {
+  STATUSES,
+  STATUS_LABELS,
+  parseLibraryJson,
+  serializeLibrary,
+} from '../lib/storage'
 import { authorLine, parseYear, workTitle } from '../lib/crossref'
 import { toBibtex } from '../lib/citations'
 
@@ -12,22 +18,44 @@ type Props = {
   onRemove: (doi: string) => void
   onStatus: (doi: string, status: ReadingStatus) => void
   onNote: (doi: string, note: string) => void
+  onImport: (entries: LibraryEntry[]) => { added: number; skipped: number }
 }
+
+type Notice = { kind: 'ok' | 'error'; text: string }
 
 const FILTERS: Array<{ value: Filter; label: string }> = [
   { value: 'all', label: 'All' },
   ...STATUSES.map((status) => ({ value: status, label: STATUS_LABELS[status] })),
 ]
 
-function downloadBibtex(entries: LibraryEntry[]) {
-  const text = entries.map((entry) => toBibtex(entry.work)).join('\n\n')
-  const blob = new Blob([text], { type: 'application/x-bibtex;charset=utf-8' })
+function downloadFile(name: string, text: string, type: string) {
+  const blob = new Blob([text], { type })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = 'refs-workspace.bib'
+  link.download = name
   link.click()
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+function downloadBibtex(entries: LibraryEntry[]) {
+  downloadFile(
+    'refs-workspace.bib',
+    entries.map((entry) => toBibtex(entry.work)).join('\n\n'),
+    'application/x-bibtex;charset=utf-8',
+  )
+}
+
+function downloadJson(entries: LibraryEntry[]) {
+  downloadFile(
+    'refs-workspace-library.json',
+    serializeLibrary(entries),
+    'application/json;charset=utf-8',
+  )
+}
+
+function plural(count: number, word: string) {
+  return `${count} ${word}${count === 1 ? '' : 's'}`
 }
 
 function NoteField({ value, onSave }: { value: string; onSave: (note: string) => void }) {
@@ -74,8 +102,16 @@ function NoteField({ value, onSave }: { value: string; onSave: (note: string) =>
   )
 }
 
-export function LibraryView({ entries, onOpen, onRemove, onStatus, onNote }: Props) {
+export function LibraryView({
+  entries,
+  onOpen,
+  onRemove,
+  onStatus,
+  onNote,
+  onImport,
+}: Props) {
   const [filter, setFilter] = useState<Filter>('all')
+  const [notice, setNotice] = useState<Notice | null>(null)
 
   const counts: Record<Filter, number> = {
     all: entries.length,
@@ -85,6 +121,37 @@ export function LibraryView({ entries, onOpen, onRemove, onStatus, onNote }: Pro
   }
 
   const visible = filter === 'all' ? entries : entries.filter((entry) => entry.status === filter)
+
+  async function handleImport(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    // Reset so importing the same file again still fires a change event.
+    event.target.value = ''
+    if (!file) return
+
+    try {
+      const imported = parseLibraryJson(await file.text())
+      const { added, skipped } = onImport(imported)
+      if (added === 0) {
+        setNotice({
+          kind: 'ok',
+          text: `No new papers — all ${plural(skipped, 'entry')} are already in the library.`,
+        })
+      } else {
+        setNotice({
+          kind: 'ok',
+          text:
+            skipped > 0
+              ? `Imported ${plural(added, 'paper')}; ${plural(skipped, 'entry')} already in the library.`
+              : `Imported ${plural(added, 'paper')}.`,
+        })
+      }
+    } catch (error) {
+      setNotice({
+        kind: 'error',
+        text: error instanceof Error ? error.message : 'Could not import that file.',
+      })
+    }
+  }
 
   return (
     <div className="library">
@@ -103,15 +170,44 @@ export function LibraryView({ entries, onOpen, onRemove, onStatus, onNote }: Pro
           ))}
         </div>
 
-        <button
-          type="button"
-          className="btn"
-          onClick={() => downloadBibtex(entries)}
-          disabled={entries.length === 0}
-        >
-          Export BibTeX
-        </button>
+        <div className="btn-row">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => downloadBibtex(entries)}
+            disabled={entries.length === 0}
+          >
+            Export BibTeX
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => downloadJson(entries)}
+            disabled={entries.length === 0}
+          >
+            Export JSON
+          </button>
+          <label className="btn">
+            Import JSON
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="visually-hidden"
+              onChange={handleImport}
+            />
+          </label>
+        </div>
       </div>
+
+      {notice && (
+        <p
+          className={notice.kind === 'error' ? 'state error' : 'hint'}
+          role="status"
+          aria-live="polite"
+        >
+          {notice.text}
+        </p>
+      )}
 
       {entries.length === 0 && (
         <p className="state">

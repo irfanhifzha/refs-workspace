@@ -40,12 +40,13 @@ dodge limits is explicitly discouraged by Crossref.
 
 | Action | Requests | Cache |
 |---|---|---|
-| Typing in the search box | 0 while typing; 1 per 450 ms pause, once the query is 3+ characters | Search page cached by `query|offset` |
+| Typing in the search box | 0 — the input is local until you press Enter | — |
+| Submitting a search (Enter) | 1, once the query is 3+ characters | Search page cached by `query|offset` |
 | Dismissing a search (under 3 chars, clearing) | 0 | — |
 | "Load more" | 1 | Next offset cached |
-| Opening a paper from results | 0 — the list result has the metadata, but the detail view fetches anyway | Detail cached by DOI |
+| Opening a paper from results | 1 — the list record lacks references, so the detail view fetches the full record | Detail cached by DOI |
 | Opening a paper from a reference or the library | 1 (unless already cached) | Detail cached by DOI |
-| Clicking between search and library | 0 | Results live in `App.tsx`, so the search hook is not remounted |
+| Clicking between search and library | 0 | Returning to the same `?q=` is served from the search cache |
 | Saving / removing / editing notes | 0 | `localStorage` only |
 | Copying a citation / exporting BibTeX | 0 | Local formatting only |
 
@@ -54,17 +55,20 @@ requests fetch the full record because references are only available there.
 
 ## How the app reacts
 
-### While you type
+### While you search
 
-- **450 ms debounce** (`DEBOUNCE_MS` in `src/hooks/useCrossrefSearch.ts`). No request is sent until the
-  input pauses.
+- **Enter submits; typing does not.** The input only updates local state, so a whole sentence costs one
+  request instead of one per pause. The submitted query is what appears in the URL (`?q=…`).
 - **3-character minimum.** Shorter queries cause no traffic at all.
-- **Automatic abort.** A new keystroke aborts the in-flight search with `AbortController`; the aborted
-  request never reaches the UI.
+- **Automatic abort.** Submitting a new search aborts the in-flight request with `AbortController`; the
+  aborted request never reaches the UI. Crossref may still have counted a request that already left
+  the browser.
 - **Stale results are dropped.** Each request carries an incrementing id, and only the response for the
   latest query is applied, so out-of-order responses cannot overwrite newer results.
-- **Old results are replaced by a skeleton** as soon as the query changes, rather than showing results
-  for a query you no longer have typed.
+- **Old results are replaced by a skeleton** as soon as the submitted query changes, rather than
+  showing results for a query you no longer have searched.
+- **Repeated submissions are cached.** Re-submitting the same query (or navigating back to it) is
+  served from memory without another request.
 
 ### While paging
 
@@ -127,7 +131,8 @@ at most one more.
 
 1. Set `VITE_CROSSREF_MAILTO` and restart the dev server.
 2. Pause a few seconds and use **Try again** — do not reload repeatedly.
-3. Avoid scripting the app or holding a key in the search box; the debounce only helps if input pauses.
+3. Avoid pressing Enter repeatedly or scripting the app; each submit costs one request. Typing alone
+   no longer does.
 4. If you build batch features (e.g. resolving every reference at once), add a serial queue limited to
    1 request/sec public or 3/sec polite, and honor `Retry-After` before retrying.
 5. For sustained production traffic, Crossref expects you to use a backend proxy with caching (and
@@ -137,7 +142,6 @@ at most one more.
 
 | Setting | Location | Current value |
 |---|---|---|
-| Debounce delay | `src/hooks/useCrossrefSearch.ts` — `DEBOUNCE_MS` | 450 ms |
 | Minimum query length | `src/hooks/useCrossrefSearch.ts` — `MIN_QUERY_LENGTH` | 3 |
 | Page size | `src/lib/crossref.ts` — `PAGE_SIZE` | 20 |
 | Cache size | `src/lib/crossref.ts` — `remember()` | 80 entries each |

@@ -4,9 +4,11 @@ A small web app for learning web development **and** for researching: search sch
 Crossref API, read their metadata, follow their references, and keep a personal library of what you're
 reading.
 
-Status: MVP implemented. M1–M4 complete, M5 mostly complete. Still unverified: the rendered layout at
-320/768/1440 px, Lighthouse scores, and a click-through of search → paper → library. M1's temporary
-probe was skipped in favor of building the real search UI in M2.
+Status: MVP implemented. M1–M4 complete, M5 mostly complete. M6 partially done: URL routing and
+library JSON import/export shipped; related papers, cited-by, and tests remain. Switched from live
+(debounced) search to Enter-to-search. Still unverified: the rendered layout at 320/768/1440 px,
+Lighthouse scores, and a click-through of search → paper → library. M1's temporary probe was skipped
+in favor of building the real search UI in M2.
 
 ---
 
@@ -170,8 +172,8 @@ can call it directly. Verified against the live API on 2026-11-18.
 
 Rules for the client:
 
-- Debounce the search box (~400 ms).
-- One in-flight request; abort the previous with `AbortController` on new input.
+- Search only when the query is submitted (Enter); typing alone sends no requests.
+- One in-flight request; abort the previous with `AbortController` on a new submission.
 - On `429`: show "Crossref is busy, retrying shortly", wait ≥1 s (honor `Retry-After` if present), never retry in a tight loop.
 - Read `x-rate-limit-limit` / `x-rate-limit-interval` / `x-api-pool` from response headers in dev to confirm which pool is being used.
 
@@ -236,7 +238,7 @@ Each milestone ends in something runnable and is a deliberate learning step.
 - Learn: typed fetch wrappers, reading headers, JSON shape.
 
 ### M2 — Search UI (1 day)
-- [x] `useCrossrefSearch` with debounce + abort.
+- [x] `useCrossrefSearch` driven by the submitted query + abort.
 - [x] `SearchBar`, `WorkList`, loading / empty / error / 429 states.
 - [x] "Load more" via `offset`, dedupe by DOI.
 - Learn: effects, cleanups, race conditions.
@@ -261,7 +263,8 @@ Each milestone ends in something runnable and is a deliberate learning step.
 - Learn: formatting edge cases, accessibility, performance measurement.
 
 ### M6 — Stretch (optional)
-- [ ] URL routing (`/paper/:doi`, `/library`) with React Router.
+- [x] URL routing for search/paper/library (`?q=`, `/library`, `/paper?doi=`) with the History API.
+- [x] Library JSON import/export with DOI dedupe, and reference-free snapshots.
 - [ ] Related papers via shared references.
 - [ ] Cited-by via OpenCitations if it proves worthwhile.
 - [ ] Minimal tests with Vitest for normalizers and citation formatters.

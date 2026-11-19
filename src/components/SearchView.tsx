@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { CrossrefSearch } from '../hooks/useCrossrefSearch'
 import { SearchBar } from './SearchBar'
 import { WorkCard } from './WorkCard'
@@ -5,25 +6,29 @@ import { WorkCard } from './WorkCard'
 type Props = {
   query: string
   search: CrossrefSearch
-  onQueryChange: (value: string) => void
+  onSubmit: (value: string) => void
   onOpen: (doi: string) => void
   isSaved: (doi: string) => boolean
 }
 
 const MIN_QUERY_LENGTH = 3
 
-export function SearchView({ query, search, onQueryChange, onOpen, isSaved }: Props) {
-  const trimmed = query.trim()
-  const showIntro = trimmed.length < MIN_QUERY_LENGTH
-  const showResults = !showIntro && !search.loading && !search.error
+export function SearchView({ query, search, onSubmit, onOpen, isSaved }: Props) {
+  // Remounted by App when the URL query changes, so this tracks the submitted query.
+  const [draft, setDraft] = useState(query)
+  const submitted = search.query.trim()
+  const tooShort = submitted.length < MIN_QUERY_LENGTH
+  const showIntro = tooShort && !search.loading && !search.error
+  const showResults = !tooShort && !search.loading && !search.error
+  const draftLength = draft.trim().length
+  const showMinHint =
+    !search.loading && !search.error && draftLength > 0 && draftLength < MIN_QUERY_LENGTH
 
   return (
     <div>
-      <SearchBar value={query} onChange={onQueryChange} />
+      <SearchBar value={draft} onChange={setDraft} onSubmit={onSubmit} />
 
-      {trimmed.length > 0 && showIntro && (
-        <p className="hint">Type at least {MIN_QUERY_LENGTH} characters to search.</p>
-      )}
+      {showMinHint && <p className="hint">Type at least {MIN_QUERY_LENGTH} characters to search.</p>}
 
       {search.loading && (
         <div className="skeleton" aria-busy="true" aria-label="Searching Crossref">
@@ -45,8 +50,10 @@ export function SearchView({ query, search, onQueryChange, onOpen, isSaved }: Pr
         </div>
       )}
 
-      {showIntro && !search.loading && !search.error && (
-        <p className="state">Search Crossref for a paper by title, author, or journal.</p>
+      {showIntro && (
+        <p className="state">
+          Search Crossref for a paper by title, author, or journal. Press Enter to search.
+        </p>
       )}
 
       {showResults && (
