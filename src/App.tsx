@@ -7,6 +7,7 @@ import { useCrossrefSearch } from './hooks/useCrossrefSearch'
 import { useLibrary } from './hooks/useLibrary'
 import { useRoute } from './hooks/useRoute'
 import type { SearchFilters } from './lib/crossref'
+import { parseDoiInput } from './lib/crossref'
 import { goBack, initializeRouter, navigate } from './lib/router'
 import { loadSearchHistory, rememberSearch, saveSearchHistory } from './lib/storage'
 import './App.css'
@@ -55,6 +56,12 @@ function App() {
   const submitSearch = useCallback(
     (value: string) => {
       const query = value.trim()
+      // A DOI, doi.org URL, or Crossref JSON goes straight to the detail view.
+      const doi = parseDoiInput(query)
+      if (doi) {
+        navigate({ name: 'paper', doi })
+        return
+      }
       setHistory((current) => rememberSearch(current, query))
       if (route.name === 'search' && route.query === query) return
       // Refining a search should not fill the back button with old queries.

@@ -66,8 +66,8 @@ export function formatApa(work: CrossrefWork): string {
 
 function bibValue(value: string): string {
   return value
-    .replace(/\\/g, '\\textbackslash{}')
-    .replace(/([{}])/g, '\\$1')
+    // One pass so escaping a backslash doesn't escape the braces it introduces.
+    .replace(/[\\{}]/g, (char) => (char === '\\' ? '\\textbackslash{}' : `\\${char}`))
     .replace(/\s+/g, ' ')
     .trim()
 }

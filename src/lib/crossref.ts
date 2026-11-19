@@ -1,4 +1,5 @@
 import { toPlainText } from './jats'
+import { noteRateLimitHit, noteRateLimits, schedule } from './queue'
 
 const BASE_URL = 'https://api.crossref.org'
 const MAILTO = (import.meta.env.VITE_CROSSREF_MAILTO ?? '').trim()
@@ -55,6 +56,7 @@ const LIST_SELECT = [
   'URL',
   'is-referenced-by-count',
   'references-count',
+  'subject',
 ].join(',')
 
 export type CrossrefAuthor = {
@@ -96,6 +98,7 @@ export type CrossrefWork = {
   page?: string
   URL?: string
   abstract?: string
+  subject?: string[]
   ISSN?: string[]
   'is-referenced-by-count'?: number
   'references-count'?: number
@@ -141,7 +144,11 @@ function remember<K, V>(cache: Map<K, V>, key: K, value: V) {
 }
 
 export function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === 'AbortError'
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { name?: unknown }).name === 'AbortError'
+  )
 }
 
 export function errorMessage(error: unknown): string {
@@ -157,19 +164,28 @@ function withMailto(params: URLSearchParams): URLSearchParams {
 
 async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
   let response: Response
+  let retryAfterMs = 5000
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
-      signal,
-      headers: { Accept: 'application/json' },
-    })
+    response = await schedule(async () => {
+      const result = await fetch(`${BASE_URL}${path}`, {
+        signal,
+        headers: { Accept: 'application/json' },
+      })
+      noteRateLimits(result.headers)
+      if (result.status === 429) {
+        retryAfterMs = noteRateLimitHit(result.headers.get('retry-after'))
+      }
+      return result
+    }, signal)
   } catch (error) {
     if (isAbortError(error)) throw error
     throw new CrossrefError('Could not reach Crossref. Check your connection and try again.', 0)
   }
 
   if (response.status === 429) {
+    const wait = Math.max(1, Math.ceil(retryAfterMs / 1000))
     throw new CrossrefError(
-      'Crossref is busy right now (rate limit). Wait a few seconds and try again.',
+      `Crossref is busy right now (rate limit). New requests are paused for about ${wait}s — try again after that.`,
       429,
     )
   }
@@ -239,6 +255,7 @@ export function normalizeWork(raw: CrossrefWork): CrossrefWork {
     'container-title': cleanList(raw['container-title']),
     'short-container-title': cleanList(raw['short-container-title']),
     abstract: cleanField(raw.abstract),
+    subject: cleanList(raw.subject),
     reference: references && references.length > 0 ? references : undefined,
   }
 }
@@ -301,9 +318,40 @@ export async function searchWorks(
   return page
 }
 
+const STOP_WORDS = new Set([
+  'the',
+  'and',
+  'for',
+  'with',
+  'from',
+  'into',
+  'using',
+  'this',
+  'that',
+  'study',
+  'paper',
+])
+
+function titleTokens(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word)),
+  )
+}
+
+function sharedCount(left: Set<string>, right: Set<string>): number {
+  let count = 0
+  for (const value of left) if (right.has(value)) count += 1
+  return count
+}
+
 /**
- * Approximate related papers with one title/author search. Opt-in from the detail view and cached by
- * DOI, so opening the same paper again costs nothing.
+ * Approximate related papers with one title/author search, reranked locally by shared subject terms,
+ * title overlap, and whether the reference lists connect. Opt-in and cached by DOI, so it stays
+ * within the one-request budget.
  */
 export async function findRelatedWorks(
   work: CrossrefWork,
@@ -324,16 +372,46 @@ export async function findRelatedWorks(
   const params = withMailto(
     new URLSearchParams({
       'query.bibliographic': query,
-      rows: '8',
+      rows: '20',
       select: LIST_SELECT,
     }),
   )
 
+  const subjects = new Set((work.subject ?? []).map((subject) => subject.toLowerCase().trim()))
+  const tokens = titleTokens(title)
+  const referenceDois = new Set(
+    (work.reference ?? [])
+      .map((reference) => reference.DOI?.toLowerCase())
+      .filter((doi): doi is string => Boolean(doi)),
+  )
+  const families = new Set(
+    (work.author ?? [])
+      .map((person) => person.family?.toLowerCase())
+      .filter((family): family is string => Boolean(family)),
+  )
+
   const data = await request<CrossrefListResponse>(`/works?${params.toString()}`, signal)
+
   const items = (data.message.items ?? [])
     .map(normalizeWork)
     .filter((item) => item.DOI.toLowerCase() !== key && item.title?.[0])
+    .map((item) => {
+      const itemSubjects = (item.subject ?? []).map((subject) => subject.toLowerCase().trim())
+      let score = itemSubjects.filter((subject) => subjects.has(subject)).length * 4
+      score += sharedCount(tokens, titleTokens(item.title?.[0] ?? ''))
+      if (referenceDois.has(item.DOI.toLowerCase())) score += 3
+      if (
+        item.author?.some(
+          (person) => person.family && families.has(person.family.toLowerCase()),
+        )
+      ) {
+        score += 1
+      }
+      return { item, score }
+    })
+    .sort((a, b) => b.score - a.score)
     .slice(0, 5)
+    .map((entry) => entry.item)
 
   remember(relatedCache, key, items)
   return items
@@ -385,4 +463,53 @@ export function typeLabel(type?: string): string | null {
 
 export function doiUrl(doi: string): string {
   return `https://doi.org/${doi}`
+}
+
+const DOI_PATTERN = /10\.\d{4,9}\/\S+/i
+
+/** Drop punctuation a DOI picked up from a URL, quoted JSON, or a sentence. */
+function trimDoi(value: string): string {
+  return value.trim().replace(/["'<>.,;]+$/, '')
+}
+
+function findDoi(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const match = value.match(DOI_PATTERN)
+    return match ? trimDoi(match[0]) : null
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const doi = findDoi(item)
+      if (doi) return doi
+    }
+    return null
+  }
+  if (isRecord(value)) {
+    if (typeof value.DOI === 'string') return trimDoi(value.DOI)
+    if (typeof value.doi === 'string') return trimDoi(value.doi)
+    if ('message' in value) return findDoi(value.message)
+    if ('items' in value) return findDoi(value.items)
+  }
+  return null
+}
+
+/**
+ * Recognize the fastest path into the detail view: a bare DOI, a doi.org URL, or a pasted Crossref
+ * JSON blob. Returns null when the input should be treated as a normal search query.
+ */
+export function parseDoiInput(raw: string): string | null {
+  const value = raw.trim()
+  if (!value) return null
+
+  if (value.startsWith('{') || value.startsWith('[')) {
+    try {
+      const doi = findDoi(JSON.parse(value))
+      if (doi) return doi
+    } catch {
+      // Not JSON after all; fall through to the DOI pattern.
+    }
+  }
+
+  const match = value.match(DOI_PATTERN)
+  return match ? trimDoi(match[0]) : null
 }

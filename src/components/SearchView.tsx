@@ -42,7 +42,7 @@ export function SearchView({
 
   return (
     <div>
-      <SearchBar value={draft} onChange={setDraft} onSubmit={onSubmit} />
+      <SearchBar value={draft} history={history} onChange={setDraft} onSubmit={onSubmit} />
 
       <SearchFilterBar
         key={`${filters.from ?? ''}|${filters.to ?? ''}|${filters.type ?? ''}|${filters.sort}`}
@@ -53,7 +53,7 @@ export function SearchView({
       {showIntro && history.length > 0 && (
         <section className="history" aria-label="Recent searches">
           <div className="history-head">
-            <span className="history-title">Recent searches</span>
+            <span className="history-title">Recent searches · ↑↓ recall</span>
             <button type="button" className="btn btn-ghost" onClick={onClearHistory}>
               Clear
             </button>

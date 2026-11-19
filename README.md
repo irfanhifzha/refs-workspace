@@ -9,15 +9,19 @@ Planning and status live in [`plan.md`](./plan.md).
 ## What it does
 
 - Search Crossref papers by title, author, or journal on Enter, with load-more paging.
+- Paste a DOI, a doi.org URL, or a Crossref JSON blob to jump straight to that paper.
 - Narrow results by publication year, type, and metadata availability (abstract, references,
   full-text link), and sort by relevance, date, or citation count.
-- Re-run recent searches from a local history (last 10).
+- Re-run recent searches from a local history (last 10), or recall them with the arrow keys in the
+  search box.
 - Open a paper for full metadata, abstract, and its deposited reference list; follow DOI-carrying
   references into the app or out to doi.org.
 - Save papers to a local library, track `To read` / `Reading` / `Done`, and attach notes.
 - Copy an approximate APA citation or BibTeX, and export the whole library as a `.bib` file.
-- Ask for related papers on a detail page — one opt-in Crossref request, cached by DOI.
-- Back up and restore the library as JSON, merging imports by DOI.
+- Ask for related papers on a detail page — one opt-in Crossref request, reranked by shared subject
+  terms and citation overlap, cached by DOI.
+- Back up and restore the library as JSON, or seed it from a BibTeX or RIS export. Imports are
+  previewed before merging, with new and duplicate entries counted and deduplicated by DOI.
 - Keep every view and every search criterion in the URL — `/` (with `?q=`), `/library`, and `/paper?doi=…` — so reloads,
   bookmarks, and back/forward navigation work.
 
@@ -40,14 +44,17 @@ What that means in practice:
   Crossref `has-*` filters, so narrowing a search costs no extra requests.
 - **One paper at a time.** A detail record is fetched only when a paper is opened, never preloaded in
   the background.
+- **Requests are serialized.** One Crossref call is in flight at a time, spaced from the API's own
+  `x-rate-limit-*` headers, so paging and related-paper requests cannot stack up.
 - **Everything is cached in memory**, keyed by the full search criteria (query, year range, type,
-  sort) and DOI, so back/forward navigation, repeated queries, and re-opening a paper cost nothing.
+  availability filters, sort) and DOI, so back/forward navigation, repeated queries, and re-opening a
+  paper cost nothing.
 - **Related papers are opt-in.** The detail page only searches for similar work when asked, uses a
   single title/author query, and caches the result by DOI.
 - **The polite pool is expected.** Set `VITE_CROSSREF_MAILTO`; it raises the limit and gives Crossref
   a way to contact you instead of silently throttling.
 - **Limits are never worked around.** No auto-retry loops, no parallel firehose, no rotating emails, no
-  scraping. A 429 becomes a manual "Try again".
+  scraping. A 429 pauses new requests for its `Retry-After` window, then becomes a manual "Try again".
 - **The library stores only what it needs.** Snapshots drop deposited reference lists; they are
   re-fetched from Crossref only when that paper's detail screen is opened.
 
@@ -63,6 +70,8 @@ npm install
 npm run dev      # dev server
 npm run build    # typecheck + production build
 npm run lint     # oxlint
+npm test         # Vitest unit tests
+npm run test:e2e # Playwright happy path (needs Chrome)
 npm run preview  # serve the build
 ```
 
@@ -87,37 +96,22 @@ against the API-usage philosophy above: anything that multiplies requests needs 
 before it ships.
 
 Recently shipped: Enter-to-search, URL routing for all three views, filters and sorting,
-metadata-availability filters, local search history, opt-in related papers, JSON library
-import/export, and reference-free library snapshots (references are re-fetched on the detail screen).
-
-### Near-term (the obvious next steps)
-
-- **Tests that pay for themselves** — Vitest for `normalizeWork`, `parseYear`, `formatApa`, `toBibtex`,
-  and `jats.ts`, plus one Playwright happy path (search → open → save → reload). **[learning: unit vs. e2e]**
-- **Verify the responsive + Lighthouse targets** that `plan.md` still marks unverified, and fix what
-  fails. Boring, but the README currently promises behavior nobody has measured.
-- **Request queue** — serialize Crossref calls at the polite-pool rate, honor `Retry-After`, and read
-  `x-rate-limit-*` headers instead of hard-coding limits. This unlocks every batch feature below.
-  **[learning: scheduling, backoff]**
-- **Paste a DOI → open the paper.** One input that accepts a DOI, a doi.org URL, or a Crossref JSON
-  blob. Cheap, and the fastest path into the detail view.
-- **RIS/BibTeX import** so an existing Zotero or Mendeley export can seed the library (JSON backup and
-  restore already exist). **[learning: format parsing]**
-- **Import review step** — preview which imported entries are new or duplicate before applying them,
-  instead of merging immediately.
+metadata-availability filters, local search history with arrow-key recall, pasting a DOI/URL/Crossref
+JSON to open a paper, opt-in related papers reranked by subject overlap, JSON/BibTeX/RIS import with a
+review step, reference-free library snapshots, a serialized request queue that follows Crossref's
+rate-limit headers, Vitest and Playwright coverage, and a sharp-edged, grid-based responsive layout
+verified at 320–1440 px with Lighthouse performance/accessibility at 100.
 
 ### Search and discovery
 
-- **More filters** — publisher, open-access status, and language, with removable facet chips.
+- **More filters** — publisher, open-access status, and language, with removable facet chips. Year,
+  type, and metadata-availability filters are already in place.
 - **Author and journal jumps** — click an author to search their works; click a journal to browse
   `GET /journals/<issn>/works`.
 - **Saved searches** with a name (beyond the anonymous recent-history list), so recurring topics are
   one click away.
-- **Keyboard recall** for search history (arrow keys through recent queries).
 - **"Cited by" section** — Crossref can't do it, but OpenCitations and OpenAlex can. This was already
   a non-goal; it is the single biggest missing feature for research. **[learning: a second API, ID mapping]**
-- **Better related papers** — the current version is a title/author search; scoring by shared
-  references or subject terms would be sharper, if the extra data can be fetched politely.
 - **Frontier / citation graph view** — a small canvas or SVG graph of papers and reference edges,
   clickable to navigate. Fun, visual, and hard in the right way. **[learning: data viz]**
 - **Fallback sources** when Crossref has no abstract or references: OpenAlex, Semantic Scholar, arXiv,
@@ -134,7 +128,8 @@ import/export, and reference-free library snapshots (references are re-fetched o
 - **Highlights/quotes** — save short quoted snippets with the page number, since we don't host PDFs.
 - **Reading queue** — drag-to-reorder the `To read` list, or sort it by priority/added date.
 - **Bulk actions** — select many, set status, tag, export, or remove.
-- **Duplicate detection** by DOI and by normalized title+authors, so an import doesn't double everything.
+- **Near-duplicate detection** by normalized title+authors, so an import catches the same paper
+  deposited under two DOIs. Exact DOI dedupe already applies on add and import.
 - **Reading stats** — papers added per month, status breakdown, most-cited in the library, streaks.
   A tiny dashboard is a good excuse to practice derived state and charts.
 - **Full-text search across notes** (local, simple `includes` or a small index) so notes stay usable
@@ -177,8 +172,8 @@ import/export, and reference-free library snapshots (references are re-fetched o
 
 ### Engineering and craft
 
-- **Error boundary + telemetry-lite** — capture client errors in dev to a local log rather than a
-  third-party service.
+- **Telemetry-lite** — capture client errors in dev to a local log rather than a third-party
+  service. The error boundary itself is already in place.
 - **Accessibility pass** — keyboard navigation for results and references, focus management when the
   detail view opens, and screen-reader checks on the loading/empty/error states.
 - **Design tokens** — move the ad-hoc CSS values into a few custom properties so themes (light/dark,
@@ -196,6 +191,6 @@ import/export, and reference-free library snapshots (references are re-fetched o
 - Hundreds of citation styles hand-written — use CSL if this becomes real.
 - A component library or design system — the hand-written CSS is part of the learning goal.
 
-**Picking the next one:** the highest value-per-effort items are URL routing, library import/export,
-and the Crossref request queue. The flashiest is the citation graph; the most useful in daily research
-is probably "cited by" plus a stable citation key.
+**Picking the next one:** the highest value-per-effort items are "cited by" via OpenCitations, more
+filters, and saved searches. The flashiest is the citation graph; the most useful in daily research is
+probably "cited by" plus a stable citation key.

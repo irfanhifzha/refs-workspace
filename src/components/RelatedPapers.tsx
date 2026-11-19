@@ -44,8 +44,8 @@ export function RelatedPapers({ work, isSaved, onOpenDoi }: Props) {
       {state.status === 'idle' && (
         <>
           <p className="hint">
-            Find papers with a similar title and author. This costs one Crossref request, then stays
-            cached for this session.
+            Search titles and authors once on Crossref, then rank matches by shared subject terms and
+            whether the two papers cite the same work. One request, cached for this session.
           </p>
           <button type="button" className="btn" onClick={load}>
             Find related papers

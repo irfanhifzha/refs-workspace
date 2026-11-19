@@ -4,11 +4,12 @@ A small web app for learning web development **and** for researching: search sch
 Crossref API, read their metadata, follow their references, and keep a personal library of what you're
 reading.
 
-Status: MVP implemented. M1–M4 complete, M5 mostly complete. M6 partially done: URL routing, library
-JSON import/export, search filters/sorting, local search history, and opt-in related papers shipped;
-cited-by and tests remain. Switched from live (debounced) search to Enter-to-search. Still unverified:
-the rendered layout at 320/768/1440 px, Lighthouse scores, and a click-through of search → paper →
-library. M1's temporary probe was skipped in favor of building the real search UI in M2.
+Status: MVP implemented. M1–M5 complete. M6 partially done: URL routing, library JSON/BibTeX/RIS
+import with a review step, search filters/sorting, metadata-availability filters, local search history
+with keyboard recall, opt-in reranked related papers, a serialized request queue, a Vitest suite, and a
+Playwright happy path have shipped; cited-by remains. The layout is verified at 320–1440 px with no
+horizontal overflow, and the production build measured Lighthouse performance 100 / accessibility 100,
+CLS 0, LCP 1.5 s. M1's temporary probe was skipped in favor of building the real search UI in M2.
 
 ---
 
@@ -257,21 +258,25 @@ Each milestone ends in something runnable and is a deliberate learning step.
 
 ### M5 — Citations + polish (½–1 day)
 - [x] `formatApa` and `toBibtex`, copy-to-clipboard with feedback.
-- [ ] Responsive pass at 320/768/1440 px — CSS is in place, not visually verified yet.
+- [x] Responsive pass at 320/375/768/1024/1440 px — no horizontal overflow at any width.
 - [x] Error boundary + `aria-live` for result counts.
-- [ ] Measure the prod build: Lighthouse mobile perf/a11y >= 95, CLS < 0.05.
+- [x] Measure the prod build: Lighthouse mobile perf 100 / a11y 100, CLS 0, LCP 1.5 s.
 - Learn: formatting edge cases, accessibility, performance measurement.
 
 ### M6 — Stretch (optional)
 - [x] URL routing for search/paper/library (`?q=`, `/library`, `/paper?doi=`) with the History API.
 - [x] Library JSON import/export with DOI dedupe, and reference-free snapshots.
-- [x] Related papers via one opt-in title/author Crossref search (approximate, cached by DOI).
+- [x] Related papers via one opt-in title/author Crossref search, reranked by shared subjects and
+  reference overlap (cached by DOI).
 - [ ] Cited-by via OpenCitations if it proves worthwhile.
-- [ ] Minimal tests with Vitest for normalizers and citation formatters.
+- [x] Vitest coverage for normalizers, citations, JATS, importers, and the request queue, plus a
+  Playwright search → open → save → reload happy path.
 
 ## 11. Risks / open questions
 
-- **Rate limits** are low for list queries. Mitigation: debounce, cache search results in memory, keep `mailto` set. If the app ever leaves localhost, add a tiny proxy with caching.
+- **Rate limits** are low for list queries. Mitigation: Enter-to-search, a single-flight queue that
+  follows `x-rate-limit-*` and `Retry-After`, in-memory caching, and a polite-pool `mailto`. If the app
+  ever leaves localhost, add a tiny proxy with caching.
 - **Reference coverage is uneven.** Some publishers deposit nothing. Decide whether to show a "no references deposited" note or fall back to OpenCitations for that DOI (M6).
 - **Citation formatting scope** can balloon (hundreds of styles). MVP: one APA-ish style + BibTeX, clearly labeled "approximate".
 - **localStorage limits** (~5 MB) are fine for a few hundred works with `select`-trimmed records; revisit if snapshots include abstracts/references.

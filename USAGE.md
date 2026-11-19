@@ -22,7 +22,9 @@ finish before another starts. Crossref returns the live values in headers:
 - `x-concurrency-limit` — simultaneous requests allowed
 - `x-api-pool` — which pool served the request (`public-single`, `polite-array`, …)
 
-The app does not read these headers today; the table above is the operating assumption.
+The request queue reads `x-rate-limit-limit` and `x-rate-limit-interval` after each response and uses
+that spacing for subsequent requests. `x-api-pool` and `x-concurrency-limit` are informational only:
+the app never runs more than one request at a time regardless of pool.
 
 ## Joining the polite pool
 
@@ -41,6 +43,8 @@ dodge limits is explicitly discouraged by Crossref.
 | Action | Requests | Cache |
 |---|---|---|
 | Typing in the search box | 0 — the input is local until you press Enter | — |
+| Arrow keys through recent searches | 0 — history is local | `localStorage` list |
+| Pasting a DOI, doi.org URL, or Crossref JSON | 0 to recognize it; opening the paper costs 1 detail request | Detail cached by DOI |
 | Submitting a search (Enter) | 1, once the query is 3+ characters | Search page cached by the full criteria |
 | Changing a filter or sort | 1 per change, once the query is 3+ characters | Search page cached by the full criteria |
 | Dismissing a search (under 3 chars, clearing) | 0 | — |
@@ -49,6 +53,7 @@ dodge limits is explicitly discouraged by Crossref.
 | Opening a paper from results | 1 — the list record lacks references, so the detail view fetches the full record | Detail cached by DOI |
 | Opening a paper from a reference or the library | 1 (unless already cached) | Detail cached by DOI |
 | Clicking "Find related papers" | 1 per paper, only when clicked | Related results cached by DOI |
+| Importing a JSON, BibTeX, or RIS file | 0 | Previewed, then merged into `localStorage` |
 | Clicking between search and library | 0 | Returning to the same search URL is served from the search cache |
 | Saving / removing / editing notes | 0 | `localStorage` only |
 | Copying a citation / exporting BibTeX | 0 | Local formatting only |
@@ -62,6 +67,10 @@ requests fetch the full record because references are only available there.
 
 - **Enter submits; typing does not.** The input only updates local state, so a whole sentence costs one
   request instead of one per pause. The submitted query is what appears in the URL (`?q=…`).
+- **A DOI is a shortcut, not a search.** A bare DOI, a doi.org URL, or pasted Crossref JSON is
+  recognized on Enter and opens the detail view directly, skipping the search request entirely.
+- **Recent searches are recallable.** `↑` walks back through the last 10 queries and `↓` walks forward;
+  the draft you were typing is restored when you pass the newest entry.
 - **3-character minimum.** Shorter queries cause no traffic at all.
 - **Automatic abort.** Submitting a new search aborts the in-flight request with `AbortController`; the
   aborted request never reaches the UI. Crossref may still have counted a request that already left
@@ -76,7 +85,9 @@ requests fetch the full record because references are only available there.
   control immediately re-runs the current query with the new criteria; each change can cost one
   request. Changing a filter with a query shorter than 3 characters costs nothing.
 - **Related papers are opt-in.** Opening a detail page does not fetch them; the "Find related papers"
-  button issues one title/author search and caches the result by DOI for the session.
+  button issues one title/author search (20 rows), reranks those candidates locally by shared subject
+  terms, title overlap, and reference-DOI overlap, then keeps the top 5. The result is cached by DOI
+  for the session, so reranking never adds a request.
 
 ### Search filters
 
@@ -106,7 +117,8 @@ request.
 
 `src/lib/crossref.ts` keeps three in-memory maps:
 
-- search pages keyed by the complete criteria (query, year range, type, sort, offset)
+- search pages keyed by the complete criteria (query, year range, type, availability filters, sort,
+  offset)
 - works keyed by lowercase DOI
 - related-paper results keyed by lowercase DOI
 
@@ -114,14 +126,26 @@ Each map is capped at **80 entries** and evicts the oldest insertion. Opening a 
 returning to an earlier search page, is served from memory. The cache is per page load: a refresh or a
 new tab starts empty, and nothing is persisted.
 
+### The request queue
+
+Every Crossref call goes through `src/lib/queue.ts`, which runs one request at a time:
+
+- Spacing starts at ~3 requests/sec when `VITE_CROSSREF_MAILTO` is set, and 1/sec otherwise.
+- After each response, `x-rate-limit-limit` and `x-rate-limit-interval` replace that spacing, clamped
+  to 100 ms–2 s so a bad header cannot stall the app.
+- Waiting in the queue is abortable: submitting a new search cancels the queued request immediately.
+- Cached pages and works bypass the queue entirely, because they cost no request.
+
 ### On HTTP 429
 
-The request layer converts it into a `CrossrefError` with status 429 and the message:
+The response's `Retry-After` header (seconds or an HTTP date, default 5 s) is recorded, and all **new**
+requests wait until that window passes. The failed request is not retried automatically. The request
+layer converts it into a `CrossrefError` with status 429 and a message that names the pause:
 
-> Crossref is busy right now (rate limit). Wait a few seconds and try again.
+> Crossref is busy right now (rate limit). New requests are paused for about 5s — try again after that.
 
-The UI shows that message in place of results, with a **Try again** button. There is **no automatic
-retry loop**, no exponential backoff, and no queue — this is deliberate, because retrying a
+The UI shows that message in place of results, with a **Try again** button. There is still **no
+automatic retry loop** and no exponential backoff on top of `Retry-After`, because retrying a
 rate-limited request immediately makes the shared pool worse.
 
 ### On network or HTTP errors
@@ -142,13 +166,10 @@ offset.
 
 Honest gaps, useful to know before scaling usage:
 
-- No request queue or serialization to stay at exactly 1/sec public or 3/sec polite.
-- No use of `Retry-After`, even when Crossref sends it.
-- No reading of `x-rate-limit-*` headers to adapt behavior.
 - No server-side cache, shared cache, or persistence of Crossref data beyond saved library metadata.
-- No request coalescing: two components asking for the same DOI in the same tick can issue two requests
-  (rare in practice; the detail view is single-instance).
-- Opening several references quickly can exceed the single-record concurrency limit.
+- No use of `x-concurrency-limit` or `x-api-pool`; the queue is always single-flight.
+- No request coalescing: two components asking for the same DOI before the first response lands can
+  issue two requests (rare in practice; the detail view is single-instance).
 
 For normal single-user browsing this is fine: a search costs one request, and each paper you open costs
 at most one more.
@@ -159,8 +180,8 @@ at most one more.
 2. Pause a few seconds and use **Try again** — do not reload repeatedly.
 3. Avoid pressing Enter repeatedly or scripting the app; each submit costs one request. Typing alone
    no longer does.
-4. If you build batch features (e.g. resolving every reference at once), add a serial queue limited to
-   1 request/sec public or 3/sec polite, and honor `Retry-After` before retrying.
+4. If you build batch features (e.g. resolving every reference at once), route them through the
+   existing queue so they cannot bypass its spacing or the `Retry-After` pause.
 5. For sustained production traffic, Crossref expects you to use a backend proxy with caching (and
    Metadata Plus for higher limits); the browser-direct design here is for a single local user.
 
@@ -172,3 +193,5 @@ at most one more.
 | Page size | `src/lib/crossref.ts` — `PAGE_SIZE` | 20 |
 | Cache size | `src/lib/crossref.ts` — `remember()` | 80 entries each |
 | Polite-pool email | `.env.local` — `VITE_CROSSREF_MAILTO` | unset |
+| Queue spacing | `src/lib/queue.ts` — `DEFAULT_INTERVAL_MS` | 340 ms polite / 1000 ms public |
+| Retry-After fallback | `src/lib/queue.ts` — `DEFAULT_RETRY_AFTER_MS` | 5000 ms |

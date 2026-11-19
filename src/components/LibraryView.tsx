@@ -1,12 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import type { LibraryEntry, ReadingStatus } from '../lib/storage'
-import {
-  STATUSES,
-  STATUS_LABELS,
-  parseLibraryJson,
-  serializeLibrary,
-} from '../lib/storage'
+import { STATUSES, STATUS_LABELS, serializeLibrary } from '../lib/storage'
+import { parseImportFile } from '../lib/importers'
 import { authorLine, parseYear, workTitle } from '../lib/crossref'
 import { toBibtex } from '../lib/citations'
 
@@ -22,6 +18,12 @@ type Props = {
 }
 
 type Notice = { kind: 'ok' | 'error'; text: string }
+
+type PendingImport = {
+  entries: LibraryEntry[]
+  duplicates: number
+  skipped: number
+}
 
 const FILTERS: Array<{ value: Filter; label: string }> = [
   { value: 'all', label: 'All' },
@@ -112,6 +114,7 @@ export function LibraryView({
 }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
   const [notice, setNotice] = useState<Notice | null>(null)
+  const [pending, setPending] = useState<PendingImport | null>(null)
 
   const counts: Record<Filter, number> = {
     all: entries.length,
@@ -129,28 +132,52 @@ export function LibraryView({
     if (!file) return
 
     try {
-      const imported = parseLibraryJson(await file.text())
-      const { added, skipped } = onImport(imported)
-      if (added === 0) {
-        setNotice({
-          kind: 'ok',
-          text: `No new papers — all ${plural(skipped, 'entry')} are already in the library.`,
-        })
-      } else {
-        setNotice({
-          kind: 'ok',
-          text:
-            skipped > 0
-              ? `Imported ${plural(added, 'paper')}; ${plural(skipped, 'entry')} already in the library.`
-              : `Imported ${plural(added, 'paper')}.`,
-        })
+      const parsed = parseImportFile(file.name, await file.text())
+      if (parsed.entries.length === 0) {
+        throw new Error(
+          parsed.skipped > 0
+            ? `None of those ${plural(parsed.skipped, 'entry')} includes a DOI. Crossref needs one to save a paper.`
+            : 'No library entries were found in that file.',
+        )
       }
+      const imported = parsed.entries
+      // Preview against the current library (and earlier rows in the file) before merging.
+      const known = new Set(entries.map((entry) => entry.doi.toLowerCase()))
+      const fresh: LibraryEntry[] = []
+      let duplicates = 0
+      for (const entry of imported) {
+        const key = entry.doi.toLowerCase()
+        if (known.has(key)) {
+          duplicates += 1
+          continue
+        }
+        known.add(key)
+        fresh.push(entry)
+      }
+      setNotice(null)
+      setPending({ entries: fresh, duplicates, skipped: parsed.skipped })
     } catch (error) {
+      setPending(null)
       setNotice({
         kind: 'error',
         text: error instanceof Error ? error.message : 'Could not import that file.',
       })
     }
+  }
+
+  function applyImport() {
+    if (!pending) return
+    const { added, skipped } = onImport(pending.entries)
+    setNotice({
+      kind: 'ok',
+      text:
+        added === 0
+          ? `No new papers — all ${plural(skipped, 'entry')} are already in the library.`
+          : skipped > 0
+            ? `Imported ${plural(added, 'paper')}; ${plural(skipped, 'entry')} already in the library.`
+            : `Imported ${plural(added, 'paper')}.`,
+    })
+    setPending(null)
   }
 
   return (
@@ -188,16 +215,54 @@ export function LibraryView({
             Export JSON
           </button>
           <label className="btn">
-            Import JSON
+            Import file
             <input
               type="file"
-              accept=".json,application/json"
+              accept=".json,.bib,.ris,.txt,application/json,application/x-bibtex,text/plain"
               className="visually-hidden"
               onChange={handleImport}
             />
           </label>
         </div>
       </div>
+
+      {pending && (
+        <section className="import-review" aria-label="Review import">
+          <p className="hint">
+            {pending.entries.length === 0
+              ? `Nothing new — all ${plural(pending.duplicates, 'entry')} are already in the library.`
+              : `Found ${plural(pending.entries.length, 'new paper')}` +
+                (pending.duplicates > 0
+                  ? `; ${plural(pending.duplicates, 'entry')} already in the library.`
+                  : '.')}
+            {pending.skipped > 0 &&
+              ` ${plural(pending.skipped, 'record')} without a DOI will be skipped.`}
+          </p>
+          {pending.entries.length > 0 && (
+            <ul className="import-preview">
+              {pending.entries.slice(0, 5).map((entry) => (
+                <li key={entry.doi}>{workTitle(entry.work)}</li>
+              ))}
+              {pending.entries.length > 5 && (
+                <li>…and {pending.entries.length - 5} more</li>
+              )}
+            </ul>
+          )}
+          <div className="btn-row">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={pending.entries.length === 0}
+              onClick={applyImport}
+            >
+              Import {pending.entries.length}
+            </button>
+            <button type="button" className="btn" onClick={() => setPending(null)}>
+              Cancel
+            </button>
+          </div>
+        </section>
+      )}
 
       {notice && (
         <p
