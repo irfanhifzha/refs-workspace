@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { formatApa, toBibtex } from './citations'
+import {
+  formatApa,
+  formatChicago,
+  formatHarvard,
+  formatIeee,
+  formatMla,
+  formatVancouver,
+  toBibtex,
+} from './citations'
 import type { CrossrefWork } from './crossref'
 
 const article: CrossrefWork = {
@@ -32,6 +40,44 @@ describe('formatApa', () => {
       type: 'book',
     }
     expect(formatApa(book)).toBe('(n.d.). A book. Example Press. https://doi.org/10.1234/book')
+  })
+})
+
+describe('additional citation styles', () => {
+  it('formats Chicago with a quoted title and year', () => {
+    const citation = formatChicago(article)
+    expect(citation).toContain('Feynman, Richard P., and John A. Wheeler.')
+    expect(citation).toContain('1965.')
+    expect(citation).toContain('“A study of things.”')
+    expect(citation).toContain('https://doi.org/10.1234/abc')
+  })
+
+  it('formats Harvard with the year in parentheses', () => {
+    const citation = formatHarvard(article)
+    expect(citation).toContain('(1965)')
+    expect(citation).toContain("'A study of things'")
+    expect(citation).toContain('Journal of Tests, 3(2), pp. 10–20')
+  })
+
+  it('formats IEEE with vol./no./pp. and initials first', () => {
+    const citation = formatIeee(article)
+    expect(citation).toContain('R. P. Feynman and J. A. Wheeler')
+    expect(citation).toContain('vol. 3, no. 2, pp. 10–20')
+    expect(citation).toContain('doi: 10.1234/abc')
+  })
+
+  it('formats MLA with vol./no. and a DOI URL', () => {
+    const citation = formatMla(article)
+    expect(citation).toContain('“A study of things.”')
+    expect(citation).toContain('vol. 3, no. 2')
+    expect(citation).toContain('https://doi.org/10.1234/abc')
+  })
+
+  it('formats Vancouver with tight initials and semicolon volume', () => {
+    const citation = formatVancouver(article)
+    expect(citation).toContain('Feynman RP, Wheeler JA.')
+    expect(citation).toContain('1965;3(2):10–20')
+    expect(citation).toContain('doi:10.1234/abc')
   })
 })
 

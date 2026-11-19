@@ -21,6 +21,8 @@ export type LibraryEntry = {
   status: ReadingStatus
   note: string
   addedAt: string
+  /** Set when the stored metadata snapshot was last refreshed from Crossref. */
+  updatedAt?: string
 }
 
 export type LibraryFile = {
@@ -60,6 +62,8 @@ function normalizeEntry(entry: LibraryEntry): LibraryEntry {
       typeof entry.addedAt === 'string' && entry.addedAt
         ? entry.addedAt
         : new Date().toISOString(),
+    updatedAt:
+      typeof entry.updatedAt === 'string' && entry.updatedAt ? entry.updatedAt : undefined,
   }
 }
 

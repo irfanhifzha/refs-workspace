@@ -43,25 +43,34 @@ export function ReferenceList({ references, onOpenDoi }: Props) {
         References <span className="count">{references.length}</span>
       </h3>
       <ol>
-        {visible.map((reference, index) => (
-          <li key={reference.key ?? `ref-${index}`} className="ref-line">
-            <span>{referenceText(reference)}</span>
-            {reference.DOI && (
-              <span className="ref-links">
-                <button
-                  type="button"
-                  className="ref-open"
-                  onClick={() => onOpenDoi(reference.DOI as string)}
-                >
-                  Open
-                </button>
-                <a href={`https://doi.org/${reference.DOI}`} target="_blank" rel="noreferrer">
-                  doi.org
-                </a>
-              </span>
-            )}
-          </li>
-        ))}
+        {visible.map((reference, index) => {
+          const label = reference['article-title'] ?? reference.author ?? 'reference'
+          return (
+            <li key={reference.key ?? `ref-${index}`} className="ref-line">
+              <span>{referenceText(reference)}</span>
+              {reference.DOI && (
+                <span className="ref-links">
+                  <button
+                    type="button"
+                    className="ref-open"
+                    aria-label={`Open ${label} in the app`}
+                    onClick={() => onOpenDoi(reference.DOI as string)}
+                  >
+                    Open
+                  </button>
+                  <a
+                    href={`https://doi.org/${reference.DOI}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Open ${label} on doi.org`}
+                  >
+                    doi.org
+                  </a>
+                </span>
+              )}
+            </li>
+          )
+        })}
       </ol>
 
       {!expanded && references.length > INITIAL_LIMIT && (

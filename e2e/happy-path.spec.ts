@@ -84,6 +84,16 @@ test('arrow-up recalls a recent search', async ({ page }) => {
   await expect(searchbox).toHaveValue('quantum electrodynamics')
 })
 
+test('the dev gallery renders component states', async ({ page }) => {
+  await page.goto('/dev')
+
+  await expect(page.getByRole('heading', { name: 'Component gallery' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Result cards' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Record a sample error' }).click()
+  await expect(page.getByText('Sample gallery error')).toBeVisible()
+})
+
 test('pasting a DOI opens the paper directly', async ({ page }) => {
   await page.goto('/')
 

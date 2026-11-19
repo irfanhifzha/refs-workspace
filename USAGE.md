@@ -53,6 +53,8 @@ dodge limits is explicitly discouraged by Crossref.
 | Opening a paper from results | 1 — the list record lacks references, so the detail view fetches the full record | Detail cached by DOI |
 | Opening a paper from a reference or the library | 1 (unless already cached) | Detail cached by DOI |
 | Clicking "Find related papers" | 1 per paper, only when clicked | Related results cached by DOI |
+| Clicking "Find open-access PDF" | 1 Unpaywall request per paper, only when clicked (0 when Crossref deposited a PDF link) | Result, including "none", cached by DOI |
+| Refreshing stale metadata | 1 queued request per stale entry, only when pressed | Detail cache updated |
 | Importing a JSON, BibTeX, or RIS file | 0 | Previewed, then merged into `localStorage` |
 | Clicking between search and library | 0 | Returning to the same search URL is served from the search cache |
 | Saving / removing / editing notes | 0 | `localStorage` only |
@@ -136,6 +138,20 @@ Every Crossref call goes through `src/lib/queue.ts`, which runs one request at a
 - Waiting in the queue is abortable: submitting a new search cancels the queued request immediately.
 - Cached pages and works bypass the queue entirely, because they cost no request.
 
+### Open-access PDFs
+
+Two sources, in order:
+
+1. **Crossref's deposited `link` field.** The detail response already includes it; a link whose
+   `content-type` contains `pdf` becomes an "Open PDF" button at no extra cost.
+2. **Unpaywall**, opt-in and only when there is no deposited link. It requires `VITE_UNPAYWALL_EMAIL`
+   (or `VITE_CROSSREF_MAILTO`); without an email the button is hidden. One request per DOI, cached for
+   the session; a "no open-access copy" answer is cached too. Unpaywall asks for at most 100,000 calls
+   per day and the queue still serializes it.
+
+Neither source hosts the PDF — the app only links to a copy the publisher or a repository makes
+available.
+
 ### On HTTP 429
 
 The response's `Retry-After` header (seconds or an HTTP date, default 5 s) is recorded, and all **new**
@@ -168,6 +184,7 @@ Honest gaps, useful to know before scaling usage:
 
 - No server-side cache, shared cache, or persistence of Crossref data beyond saved library metadata.
 - No use of `x-concurrency-limit` or `x-api-pool`; the queue is always single-flight.
+- No PDF hosting or downloading — links only, and only when a legal copy is known.
 - No request coalescing: two components asking for the same DOI before the first response lands can
   issue two requests (rare in practice; the detail view is single-instance).
 
@@ -195,3 +212,5 @@ at most one more.
 | Polite-pool email | `.env.local` — `VITE_CROSSREF_MAILTO` | unset |
 | Queue spacing | `src/lib/queue.ts` — `DEFAULT_INTERVAL_MS` | 340 ms polite / 1000 ms public |
 | Retry-After fallback | `src/lib/queue.ts` — `DEFAULT_RETRY_AFTER_MS` | 5000 ms |
+| Unpaywall email | `.env.local` — `VITE_UNPAYWALL_EMAIL` | falls back to the Crossref email |
+| Metadata staleness | `src/hooks/useLibrary.ts` — `STALE_DAYS` | 30 days |

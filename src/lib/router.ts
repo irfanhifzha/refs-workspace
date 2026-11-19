@@ -14,6 +14,7 @@ export type Route =
       sort: SearchSort
     }
   | { name: 'library' }
+  | { name: 'dev' }
   | { name: 'paper'; doi: string }
 
 type HistoryState = { refsDepth?: number }
@@ -60,6 +61,7 @@ export function readRoute(
   const path = pathname.replace(/\/+$/, '') || '/'
 
   if (path === '/library') return { name: 'library' }
+  if (path === '/dev') return { name: 'dev' }
 
   if (path === '/paper') {
     const doi = (params.get('doi') ?? '').trim()
@@ -84,6 +86,8 @@ export function routeHref(route: Route): string {
   switch (route.name) {
     case 'library':
       return '/library'
+    case 'dev':
+      return '/dev'
     case 'paper':
       return `/paper?doi=${encodeURIComponent(route.doi)}`
     case 'search': {

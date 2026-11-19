@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { recordError } from '../lib/telemetry'
 
 type Props = { children: ReactNode }
 type State = { hasError: boolean }
@@ -12,6 +13,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    recordError(error, { kind: 'boundary', detail: info.componentStack ?? undefined })
     console.error('Unexpected UI error', error, info.componentStack)
   }
 

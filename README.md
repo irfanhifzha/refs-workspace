@@ -16,8 +16,12 @@ Planning and status live in [`plan.md`](./plan.md).
   search box.
 - Open a paper for full metadata, abstract, and its deposited reference list; follow DOI-carrying
   references into the app or out to doi.org.
-- Save papers to a local library, track `To read` / `Reading` / `Done`, and attach notes.
-- Copy an approximate APA citation or BibTeX, and export the whole library as a `.bib` file.
+- Save papers to a local library, track `To read` / `Reading` / `Done`, attach notes, and reorder the
+  `To read` queue by hand.
+- Refresh stale metadata snapshots from Crossref on demand, with a "last updated" date per entry.
+- Open a PDF when Crossref deposits a link, or look one up through Unpaywall.
+- Copy APA, Chicago, Harvard, IEEE, MLA, or Vancouver citations (or BibTeX), and export the whole
+  library as a `.bib` file.
 - Ask for related papers on a detail page — one opt-in Crossref request, reranked by shared subject
   terms and citation overlap, cached by DOI.
 - Back up and restore the library as JSON, or seed it from a BibTeX or RIS export. Imports are
@@ -51,6 +55,10 @@ What that means in practice:
   paper cost nothing.
 - **Related papers are opt-in.** The detail page only searches for similar work when asked, uses a
   single title/author query, and caches the result by DOI.
+- **PDF lookups are one request at most.** A deposited Crossref PDF link costs nothing extra; otherwise
+  Unpaywall is queried only when you ask, once per DOI, and needs a contact email.
+- **Metadata refresh is explicit.** Stale snapshots are re-fetched only when you press Refresh, one
+  queued request per entry — never in the background.
 - **The polite pool is expected.** Set `VITE_CROSSREF_MAILTO`; it raises the limit and gives Crossref
   a way to contact you instead of silently throttling.
 - **Limits are never worked around.** No auto-retry loops, no parallel firehose, no rotating emails, no
@@ -80,6 +88,8 @@ npm run preview  # serve the build
 - No sign-up or API key needed; the browser can call the API directly (CORS is open).
 - Add `mailto=you@example.com` to requests for the polite pool and higher rate limits.
 - Set it locally with `VITE_CROSSREF_MAILTO` in `.env.local`.
+- Open-access PDF lookups use [Unpaywall](https://unpaywall.org/products/api), which also requires a
+  contact email: set `VITE_UNPAYWALL_EMAIL` (it falls back to `VITE_CROSSREF_MAILTO`).
 - List/search requests are rate-limited to 1/sec public, 3/sec polite — submit searches deliberately
   (search runs on Enter, not while typing).
 
@@ -99,8 +109,11 @@ Recently shipped: Enter-to-search, URL routing for all three views, filters and 
 metadata-availability filters, local search history with arrow-key recall, pasting a DOI/URL/Crossref
 JSON to open a paper, opt-in related papers reranked by subject overlap, JSON/BibTeX/RIS import with a
 review step, reference-free library snapshots, a serialized request queue that follows Crossref's
-rate-limit headers, Vitest and Playwright coverage, and a sharp-edged, grid-based responsive layout
-verified at 320–1440 px with Lighthouse performance/accessibility at 100.
+rate-limit headers, a manual reading queue, PDF links via Crossref/Unpaywall, six citation styles, an
+on-demand metadata refresh with per-entry dates, a local dev-only error log, a focus/ARIA accessibility
+pass, shared design tokens, a `/dev` component gallery, Vitest and Playwright coverage, and a
+sharp-edged, grid-based responsive layout verified at 320–1440 px with Lighthouse
+performance/accessibility at 100.
 
 ### Search and discovery
 
@@ -126,7 +139,6 @@ verified at 320–1440 px with Lighthouse performance/accessibility at 100.
 - **Markdown notes** with a preview toggle, and a per-reference note ("why this matters").
   **[learning: safe markdown rendering]**
 - **Highlights/quotes** — save short quoted snippets with the page number, since we don't host PDFs.
-- **Reading queue** — drag-to-reorder the `To read` list, or sort it by priority/added date.
 - **Bulk actions** — select many, set status, tag, export, or remove.
 - **Near-duplicate detection** by normalized title+authors, so an import catches the same paper
   deposited under two DOIs. Exact DOI dedupe already applies on add and import.
@@ -134,13 +146,12 @@ verified at 320–1440 px with Lighthouse performance/accessibility at 100.
   A tiny dashboard is a good excuse to practice derived state and charts.
 - **Full-text search across notes** (local, simple `includes` or a small index) so notes stay usable
   past ~100 entries.
-- **PDF links** — resolve an open-access PDF URL (Unpaywall/OpenAlex) and open it in a new tab. We
-  don't host PDFs, but linking to a legal copy is a big quality-of-life win.
+- **Drag to reorder** the reading queue, replacing the current up/down buttons.
 
 ### Citations and writing
 
-- **More styles** — Chicago, MLA, IEEE, Vancouver, Harvard. Either hand-write two more, or adopt a CSL
-  engine + style files and get all of them at once. **[learning: Citation Style Language]**
+- **CSL engine** — beyond the six hand-written styles, adopt Citation Style Language + style files to
+  get the rest at once. **[learning: Citation Style Language]**
 - **CSL-JSON / RIS / EndNote export** alongside `.bib`, plus per-collection exports.
 - **Stable citation keys** (`feynman1965path`) — generated once, editable, collision-checked, and used
   in both BibTeX and copy-as-citation. Essential the moment you cite the same paper twice.
@@ -154,8 +165,6 @@ verified at 320–1440 px with Lighthouse performance/accessibility at 100.
   the `storage.ts` seam already exists for exactly this swap. **[learning: async storage, migrations]**
 - **Offline-first PWA** — service worker caches the shell and the last N work records; the library is
   readable with no connection. Already a non-goal for the MVP, but a natural next chapter.
-- **Snapshot refresh** — re-fetch saved works older than N days so metadata, citation counts, and
-  references don't silently rot. Show a "last updated" date per entry.
 - **Cross-device sync** — the honest version needs a backend (or a sync service), which changes the
   whole no-backend premise. Options: export/import files, a user-owned sync folder, or GitHub Gist. Any
   of these is a big design decision, not a weekend tweak.
@@ -172,16 +181,10 @@ verified at 320–1440 px with Lighthouse performance/accessibility at 100.
 
 ### Engineering and craft
 
-- **Telemetry-lite** — capture client errors in dev to a local log rather than a third-party
-  service. The error boundary itself is already in place.
-- **Accessibility pass** — keyboard navigation for results and references, focus management when the
-  detail view opens, and screen-reader checks on the loading/empty/error states.
-- **Design tokens** — move the ad-hoc CSS values into a few custom properties so themes (light/dark,
-  high contrast, maybe sepia for long reading sessions) are a variable swap.
 - **i18n seam** — even English-only, routing strings through a tiny dictionary makes a later
   translation cheap.
-- **Storybook-less component gallery** maybe not; but a `/dev` route that renders every component in
-  every state (loading, empty, error, 429) would make visual review much faster.
+- **Theme variants** — the tokens are in place; a sepia or high-contrast theme is now a variable swap.
+- **Screen-reader audit** on the loading/empty/error states, beyond the current focus and labeling pass.
 
 ### Deliberately not planned
 
@@ -191,6 +194,6 @@ verified at 320–1440 px with Lighthouse performance/accessibility at 100.
 - Hundreds of citation styles hand-written — use CSL if this becomes real.
 - A component library or design system — the hand-written CSS is part of the learning goal.
 
-**Picking the next one:** the highest value-per-effort items are "cited by" via OpenCitations, more
-filters, and saved searches. The flashiest is the citation graph; the most useful in daily research is
-probably "cited by" plus a stable citation key.
+**Picking the next one:** the highest value-per-effort items are "cited by" via OpenCitations, tags and
+collections, and bulk library actions. The flashiest is the citation graph; the most useful in daily
+research is probably "cited by" plus a stable citation key.

@@ -99,6 +99,12 @@ export type CrossrefWork = {
   URL?: string
   abstract?: string
   subject?: string[]
+  link?: Array<{
+    URL?: string
+    'content-type'?: string
+    'content-version'?: string
+    'intended-application'?: string
+  }>
   ISSN?: string[]
   'is-referenced-by-count'?: number
   'references-count'?: number
@@ -421,10 +427,14 @@ export function getCachedWork(doi: string): CrossrefWork | undefined {
   return workCache.get(doi.toLowerCase())
 }
 
-export async function getWork(doi: string, signal?: AbortSignal): Promise<CrossrefWork> {
+export async function getWork(
+  doi: string,
+  signal?: AbortSignal,
+  options: { force?: boolean } = {},
+): Promise<CrossrefWork> {
   const key = doi.toLowerCase()
   const cached = workCache.get(key)
-  if (cached) return cached
+  if (cached && !options.force) return cached
 
   const query = withMailto(new URLSearchParams()).toString()
   const suffix = query ? `?${query}` : ''

@@ -5,6 +5,7 @@ import { STATUSES, STATUS_LABELS, serializeLibrary } from '../lib/storage'
 import { parseImportFile } from '../lib/importers'
 import { authorLine, parseYear, workTitle } from '../lib/crossref'
 import { toBibtex } from '../lib/citations'
+import { STALE_DAYS, isStale } from '../hooks/useLibrary'
 
 type Filter = 'all' | ReadingStatus
 
@@ -14,6 +15,8 @@ type Props = {
   onRemove: (doi: string) => void
   onStatus: (doi: string, status: ReadingStatus) => void
   onNote: (doi: string, note: string) => void
+  onMove: (doi: string, direction: -1 | 1) => void
+  onRefresh: (days: number) => Promise<{ refreshed: number; failed: number; total: number }>
   onImport: (entries: LibraryEntry[]) => { added: number; skipped: number }
 }
 
@@ -110,11 +113,15 @@ export function LibraryView({
   onRemove,
   onStatus,
   onNote,
+  onMove,
+  onRefresh,
   onImport,
 }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
   const [notice, setNotice] = useState<Notice | null>(null)
   const [pending, setPending] = useState<PendingImport | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const staleCount = entries.filter((entry) => isStale(entry)).length
 
   const counts: Record<Filter, number> = {
     all: entries.length,
@@ -165,6 +172,23 @@ export function LibraryView({
     }
   }
 
+  async function handleRefresh() {
+    setRefreshing(true)
+    setNotice(null)
+    try {
+      const { refreshed, failed } = await onRefresh(STALE_DAYS)
+      setNotice({
+        kind: failed > 0 ? 'error' : 'ok',
+        text:
+          failed > 0
+            ? `Refreshed ${plural(refreshed, 'entry')}; ${plural(failed, 'entry')} could not be updated.`
+            : `Refreshed ${plural(refreshed, 'entry')} from Crossref.`,
+      })
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   function applyImport() {
     if (!pending) return
     const { added, skipped } = onImport(pending.entries)
@@ -198,6 +222,18 @@ export function LibraryView({
         </div>
 
         <div className="btn-row">
+          <button
+            type="button"
+            className="btn"
+            onClick={handleRefresh}
+            disabled={refreshing || staleCount === 0}
+          >
+            {refreshing
+              ? 'Refreshing…'
+              : staleCount > 0
+                ? `Refresh ${staleCount} ${staleCount === 1 ? 'entry' : 'entries'}`
+                : 'Metadata current'}
+          </button>
           <button
             type="button"
             className="btn"
@@ -294,6 +330,7 @@ export function LibraryView({
             ]
               .filter(Boolean)
               .join(' · ')
+            const queueIndex = visible.findIndex((item) => item.doi === entry.doi)
 
             return (
               <li key={entry.doi} className="library-item">
@@ -307,9 +344,36 @@ export function LibraryView({
                       {workTitle(entry.work)}
                     </button>
                     {meta && <p className="work-meta">{meta}</p>}
+                    {entry.updatedAt && (
+                      <p className="work-meta">
+                        Metadata updated {new Date(entry.updatedAt).toLocaleDateString()}
+                      </p>
+                    )}
                   </div>
 
                   <div className="library-actions">
+                    {filter === 'to-read' && entry.status === 'to-read' && (
+                      <div className="queue-order" role="group" aria-label="Reading queue order">
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          aria-label={`Move ${workTitle(entry.work)} up`}
+                          disabled={queueIndex <= 0}
+                          onClick={() => onMove(entry.doi, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          aria-label={`Move ${workTitle(entry.work)} down`}
+                          disabled={queueIndex === -1 || queueIndex >= visible.length - 1}
+                          onClick={() => onMove(entry.doi, 1)}
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    )}
                     <label className="status-label">
                       <span className="visually-hidden">Reading status</span>
                       <select

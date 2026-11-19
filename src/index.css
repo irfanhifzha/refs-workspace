@@ -12,6 +12,33 @@
   --danger: #b91c1c;
   --code-bg: #f4f3ec;
 
+  /* Design tokens: spacing, type, and shape are shared across every component. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-body: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-md: 1rem;
+  --text-lg: 1.0625rem;
+
+  --radius: 0;
+  --stroke: 1px;
+  --ring: 2px;
+  --control: 44px;
+  --control-lg: 48px;
+  --control-xl: 64px;
+  --container: 76rem;
+  --measure: 70ch;
+  --measure-sm: 60ch;
+
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -57,7 +84,7 @@ a {
 
 code {
   padding: 0.15em 0.35em;
-  border-radius: 0;
+  border-radius: var(--radius);
   background: var(--code-bg);
   font-size: 0.9em;
   overflow-wrap: anywhere;

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { DevGallery } from './components/DevGallery'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { LibraryView } from './components/LibraryView'
 import { SearchView } from './components/SearchView'
@@ -101,6 +102,10 @@ function App() {
 
   return (
     <div className="app">
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+
       <header className="app-header">
         <button type="button" className="brand" onClick={() => openTab('search')}>
           Refs Workspace
@@ -127,7 +132,7 @@ function App() {
         </nav>
       </header>
 
-      <main className="app-main">
+      <main id="main" className="app-main" tabIndex={-1}>
         <ErrorBoundary>
           {route.name === 'search' && (
             <SearchView
@@ -159,9 +164,13 @@ function App() {
               onRemove={library.remove}
               onStatus={library.setStatus}
               onNote={library.setNote}
+              onMove={library.move}
+              onRefresh={library.refreshStale}
               onImport={library.importEntries}
             />
           )}
+
+          {route.name === 'dev' && <DevGallery />}
 
           {route.name === 'paper' && (
             <WorkDetail
@@ -176,6 +185,12 @@ function App() {
           )}
         </ErrorBoundary>
       </main>
+
+      {import.meta.env.DEV && (
+        <footer className="app-footer">
+          <a href="/dev">Component gallery</a>
+        </footer>
+      )}
     </div>
   )
 }

@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react'
 import type { CrossrefWork } from '../lib/crossref'
 import { authorLine, doiUrl, parseYear, typeLabel } from '../lib/crossref'
 import { useWork } from '../hooks/useWork'
 import { CitationActions } from './CitationActions'
+import { PdfLink } from './PdfLink'
 import { ReferenceList } from './ReferenceList'
 import { RelatedPapers } from './RelatedPapers'
 
@@ -16,6 +18,12 @@ type Props = {
 
 export function WorkDetail({ doi, onBack, onOpenDoi, saved, isSaved, onSave }: Props) {
   const { work, loading, error, retry } = useWork(doi)
+  const heading = useRef<HTMLHeadingElement>(null)
+
+  // Move focus to the paper once it renders, so keyboard and screen-reader users land here.
+  useEffect(() => {
+    if (work) heading.current?.focus()
+  }, [work])
 
   return (
     <div className="detail">
@@ -42,7 +50,9 @@ export function WorkDetail({ doi, onBack, onOpenDoi, saved, isSaved, onSave }: P
 
       {!loading && !error && work && (
         <article>
-          <h2>{work.title?.[0] ?? work.subtitle?.[0] ?? `Untitled record (${work.DOI})`}</h2>
+          <h2 ref={heading} tabIndex={-1}>
+            {work.title?.[0] ?? work.subtitle?.[0] ?? `Untitled record (${work.DOI})`}
+          </h2>
 
           {work.author && work.author.length > 0 && (
             <p className="detail-authors">{authorLine(work)}</p>
@@ -59,6 +69,7 @@ export function WorkDetail({ doi, onBack, onOpenDoi, saved, isSaved, onSave }: P
               </button>
             )}
             <CitationActions work={work} />
+            <PdfLink work={work} />
           </div>
 
           <dl className="meta-grid">
