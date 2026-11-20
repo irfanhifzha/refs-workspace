@@ -94,12 +94,12 @@ own webview storage, so the browser, desktop app, and phone do **not** share a l
 with **Export → Download JSON** / **Copy JSON** and **Import**.
 
 ```bash
-npm run desktop:build         # Windows installers
+npm run desktop:build         # Desktop installers (.dmg on macOS, .exe/.msi on Windows)
 npm run android:build         # release APK (unsigned)
 npm run android:build:windows # Windows arm64 APK, signed with the local debug key
 ```
 
-Desktop output lands in `src-tauri/target/release/bundle/` (`msi/` and `nsis/`). Android output lands
+Desktop output lands in `src-tauri/target/release/bundle/` (`dmg/` and `macos/` on macOS, `msi/` and `nsis/` on Windows). Android output lands
 in `src-tauri/gen/android/app/build/outputs/apk/<abi>/<buildType>/`.
 
 On Windows, the Tauri CLI needs Developer Mode to create the `jniLibs` symlink, so
@@ -127,7 +127,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-`.github/workflows/release.yml` builds the Windows MSI/NSIS installers and a signed arm64 APK, sets
+`.github/workflows/release.yml` builds the macOS `.dmg`, Windows MSI/NSIS installers, and a signed arm64 APK, sets
 the app version from the tag, and attaches both to the release. Android signing uses the repository
 secrets `ANDROID_KEY_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEYSTORE_PASSWORD`, and
 `ANDROID_KEY_PASSWORD`; without them the APK is unsigned. The keystore and passwords are kept locally

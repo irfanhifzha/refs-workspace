@@ -1,5 +1,5 @@
 [package]
-name = "app"
+name = "refsworkspace"
 version = "0.1.0"
 description = "Local-first Crossref research workspace"
 authors = ["Refs Workspace"]

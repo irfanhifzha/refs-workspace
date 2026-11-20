@@ -111,7 +111,7 @@ const apkDir = path.join(gradleDir, 'app', 'build', 'outputs', 'apk', 'arm64', p
 const version = JSON.parse(
   readFileSync(path.join(root, 'src-tauri', 'tauri.conf.json'), 'utf8'),
 ).version
-const finalApk = path.join(apkDir, `Refs-Workspace-${version}-arm64.apk`)
+const finalApk = path.join(apkDir, `refsworkspace_${version}_arm64.apk`)
 const gradleSignedApk = path.join(apkDir, `app-arm64-${profile}.apk`)
 const unsignedApk = path.join(apkDir, `app-arm64-${profile}-unsigned.apk`)
 const builtApk = existsSync(gradleSignedApk) ? gradleSignedApk : unsignedApk
