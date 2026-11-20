@@ -87,6 +87,36 @@ npm run test:e2e # Playwright happy path (needs Chrome)
 npm run preview  # serve the build
 ```
 
+## Desktop and Android (Tauri)
+
+The same Vite build ships in a native window and on Android through Tauri 2. Each package has its
+own webview storage, so the browser, desktop app, and phone do **not** share a library — move one
+with **Export → Download JSON** / **Copy JSON** and **Import**.
+
+```bash
+npm run desktop:build         # Windows installers
+npm run android:build         # release APK (unsigned)
+npm run android:build:windows # Windows arm64 APK, signed with the local debug key
+```
+
+Desktop output lands in `src-tauri/target/release/bundle/` (`msi/` and `nsis/`). Android output lands
+in `src-tauri/gen/android/app/build/outputs/apk/<abi>/<buildType>/`.
+
+On Windows, the Tauri CLI needs Developer Mode to create the `jniLibs` symlink, so
+`android:build:windows` reuses the compiled library, assembles the arm64 APK with Gradle, and signs it
+with `~/.android/debug.keystore` for sideloading. Use your own keystore before distributing it. Both
+routes need JDK 17, Android SDK platform 36 with build-tools 36, NDK `27.0.12077973`, the Android Rust
+targets, and `NDK_HOME` pointing at the NDK:
+
+```bash
+rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+export NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
+```
+
+The standard `android:build` route produces an unsigned release APK; sign it with your own keystore
+before distributing. The app skips service worker registration inside Tauri, where the wrapper
+already serves the built assets.
+
 ## Crossref notes
 
 - No sign-up or API key needed; the browser can call the API directly (CORS is open).
@@ -99,7 +129,8 @@ npm run preview  # serve the build
 
 ## Stack
 
-React 19, TypeScript, Vite, Oxlint, React Compiler (enabled via the Vite Babel plugin).
+React 19, TypeScript, Vite, Oxlint, React Compiler (enabled via the Vite Babel plugin), and Tauri 2
+for the desktop and Android packages.
 
 ## Roadmap
 

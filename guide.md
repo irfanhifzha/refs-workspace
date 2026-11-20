@@ -139,8 +139,15 @@ npm test          # Vitest unit tests
 npm run test:e2e  # Playwright happy paths (uses installed Chrome)
 npm run lint
 npm run build
+npm run desktop:build                 # Tauri installers for this OS
+npm run android:build                 # release APK (unsigned)
+npm run android:build:windows         # Windows arm64 APK signed for sideloading
 ```
 
+- **Desktop and mobile** — Tauri packages share this code but keep their own webview storage. To move
+a library between the browser, desktop app, and phone, use **Export → Download/Copy JSON** and
+**Import**. Android builds need JDK 17, SDK platform 36, NDK `27.0.12077973`, Android Rust targets,
+and `NDK_HOME` set; see the README for the exact commands.
 - **`/dev`** renders every component state (loading, empty, error/429, import review, citation tools,
   error log) on one page. The footer links it in development builds only.
 - **Error log** — uncaught errors are recorded locally in development and never sent anywhere; the

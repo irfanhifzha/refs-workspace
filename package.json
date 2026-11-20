@@ -9,7 +9,11 @@
     "lint": "oxlint",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "desktop:build": "tauri build",
+    "android:build": "tauri android build --apk",
+    "android:build:windows": "node scripts/build-android-windows.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
@@ -19,6 +23,7 @@
     "@babel/core": "^7.29.7",
     "@playwright/test": "^1.65.1",
     "@rolldown/plugin-babel": "^0.3.0",
+    "@tauri-apps/cli": "^2.12.6",
     "@types/babel__core": "^7.20.5",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",

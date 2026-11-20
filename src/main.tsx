@@ -8,7 +8,10 @@ import { applyTheme, loadTheme } from './lib/theme'
 applyTheme(loadTheme())
 installTelemetry()
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+// Tauri serves the app itself; a service worker would only cache the wrapper protocol.
+const isTauri = '__TAURI_INTERNALS__' in window
+
+if (import.meta.env.PROD && !isTauri && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((error: unknown) => {
       console.warn('Service worker registration failed', error)
