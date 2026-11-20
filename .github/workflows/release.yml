@@ -65,8 +65,11 @@ jobs:
       # The ubuntu runner ships the Android SDK; install only what this app needs.
       - name: Install Android SDK packages
         run: |
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.0.12077973"
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "ndk;27.0.12077973"
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -105,7 +108,9 @@ jobs:
 
       - name: Build signed arm64 APK
         run: |
-          export NDK_HOME="$ANDROID_SDK_ROOT/ndk/27.0.12077973"
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
           npx tauri android build --apk --target aarch64
 
       - uses: actions/upload-artifact@v4
