@@ -108,7 +108,13 @@ const status = run(
 if (status !== 0) process.exit(status)
 
 const apkDir = path.join(gradleDir, 'app', 'build', 'outputs', 'apk', 'arm64', profile)
-const builtApk = path.join(apkDir, `app-arm64-${profile}${release ? '-unsigned' : ''}.apk`)
+const version = JSON.parse(
+  readFileSync(path.join(root, 'src-tauri', 'tauri.conf.json'), 'utf8'),
+).version
+const finalApk = path.join(apkDir, `Refs-Workspace-${version}-arm64.apk`)
+const gradleSignedApk = path.join(apkDir, `app-arm64-${profile}.apk`)
+const unsignedApk = path.join(apkDir, `app-arm64-${profile}-unsigned.apk`)
+const builtApk = existsSync(gradleSignedApk) ? gradleSignedApk : unsignedApk
 if (!existsSync(builtApk)) {
   console.error(`\nGradle finished but no APK exists at ${builtApk}.`)
   process.exit(1)
@@ -119,8 +125,15 @@ if (!release) {
   process.exit(0)
 }
 
-// Sign the release build with the standard local debug key so it can be
-// sideloaded. Replace this with your own keystore before distributing it.
+// A local/CI keystore.properties makes Gradle sign the release itself.
+if (builtApk === gradleSignedApk) {
+  copyFileSync(gradleSignedApk, finalApk)
+  console.log(`\nSigned arm64 APK: ${finalApk}`)
+  process.exit(0)
+}
+
+// Otherwise fall back to the standard local debug key so it can be sideloaded.
+// Replace this with your own keystore before distributing it.
 const keystore = path.join(homedir(), '.android', 'debug.keystore')
 const buildTools = path.join(androidHome, 'build-tools')
 const toolsVersion = existsSync(buildTools)
@@ -133,10 +146,7 @@ if (!existsSync(keystore) || !toolsVersion) {
 }
 
 const tools = path.join(buildTools, toolsVersion)
-const version = JSON.parse(
-  readFileSync(path.join(root, 'src-tauri', 'tauri.conf.json'), 'utf8'),
-).version
-const signedApk = path.join(apkDir, `Refs-Workspace-${version}-arm64.apk`)
+const signedApk = finalApk
 const alignedApk = path.join(apkDir, 'aligned.apk')
 
 if (run(path.join(tools, 'zipalign.exe'), ['-f', '4', builtApk, alignedApk]) !== 0) process.exit(1)

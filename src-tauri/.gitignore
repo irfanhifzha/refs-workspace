@@ -10,3 +10,7 @@
 /gen/android/app/build/
 /gen/android/local.properties
 /gen/android/.idea/
+/gen/android/keystore/
+/gen/android/keystore.properties
+/gen/android/*.jks
+/gen/android/*.keystore

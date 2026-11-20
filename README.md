@@ -103,8 +103,9 @@ Desktop output lands in `src-tauri/target/release/bundle/` (`msi/` and `nsis/`).
 in `src-tauri/gen/android/app/build/outputs/apk/<abi>/<buildType>/`.
 
 On Windows, the Tauri CLI needs Developer Mode to create the `jniLibs` symlink, so
-`android:build:windows` reuses the compiled library, assembles the arm64 APK with Gradle, and signs it
-with `~/.android/debug.keystore` for sideloading. Use your own keystore before distributing it. Both
+`android:build:windows` reuses the compiled library and assembles the arm64 APK with Gradle. It signs
+with `keystore.properties` when present (as in the release workflow) and otherwise falls back to
+`~/.android/debug.keystore` for sideloading. Use your own keystore before distributing it. Both
 routes need JDK 17, Android SDK platform 36 with build-tools 36, NDK `27.0.12077973`, the Android Rust
 targets, and `NDK_HOME` pointing at the NDK:
 
@@ -116,6 +117,22 @@ export NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
 The standard `android:build` route produces an unsigned release APK; sign it with your own keystore
 before distributing. The app skips service worker registration inside Tauri, where the wrapper
 already serves the built assets.
+
+## Releases
+
+Push a version tag to build and publish a GitHub Release:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+`.github/workflows/release.yml` builds the Windows MSI/NSIS installers and a signed arm64 APK, sets
+the app version from the tag, and attaches both to the release. Android signing uses the repository
+secrets `ANDROID_KEY_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEYSTORE_PASSWORD`, and
+`ANDROID_KEY_PASSWORD`; without them the APK is unsigned. The keystore and passwords are kept locally
+under `src-tauri/gen/android/keystore/` (gitignored) — back that folder up, because losing it means
+future APKs cannot update an installed app in place.
 
 ## Crossref notes
 
