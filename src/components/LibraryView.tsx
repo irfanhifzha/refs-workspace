@@ -6,7 +6,6 @@ import { parseImportFile } from '../lib/importers'
 import { authorLine, parseYear, workTitle } from '../lib/crossref'
 import { toBibtex } from '../lib/citations'
 import { copyToClipboard } from '../lib/clipboard'
-import { SHARE_LIMIT, shareLibraryUrl } from '../lib/share'
 import { STALE_DAYS, isStale } from '../hooks/useLibrary'
 
 type Filter = 'all' | ReadingStatus
@@ -14,8 +13,6 @@ type Filter = 'all' | ReadingStatus
 type Props = {
   entries: LibraryEntry[]
   ready: boolean
-  shared: LibraryEntry[] | null
-  onSharedDone: () => void
   onOpen: (doi: string) => void
   onRemove: (doi: string) => void
   onStatus: (doi: string, status: ReadingStatus) => void
@@ -115,8 +112,6 @@ function NoteField({ value, onSave }: { value: string; onSave: (note: string) =>
 export function LibraryView({
   entries,
   ready,
-  shared,
-  onSharedDone,
   onOpen,
   onRemove,
   onStatus,
@@ -129,6 +124,8 @@ export function LibraryView({
   const [notice, setNotice] = useState<Notice | null>(null)
   const [pending, setPending] = useState<PendingImport | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [panel, setPanel] = useState<'import' | 'export' | null>(null)
+  const [pasted, setPasted] = useState('')
   const staleCount = entries.filter((entry) => isStale(entry)).length
 
   const counts: Record<Filter, number> = {
@@ -140,27 +137,21 @@ export function LibraryView({
 
   const visible = filter === 'all' ? entries : entries.filter((entry) => entry.status === filter)
 
-  async function handleImport(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    // Reset so importing the same file again still fires a change event.
-    event.target.value = ''
-    if (!file) return
-
+  function previewImport(name: string, text: string) {
     try {
-      const parsed = parseImportFile(file.name, await file.text())
+      const parsed = parseImportFile(name, text)
       if (parsed.entries.length === 0) {
         throw new Error(
           parsed.skipped > 0
             ? `None of those ${plural(parsed.skipped, 'entry')} includes a DOI. Crossref needs one to save a paper.`
-            : 'No library entries were found in that file.',
+            : 'No library entries were found in that text.',
         )
       }
-      const imported = parsed.entries
-      // Preview against the current library (and earlier rows in the file) before merging.
+      // Preview against the current library (and earlier rows in the input) before merging.
       const known = new Set(entries.map((entry) => entry.doi.toLowerCase()))
       const fresh: LibraryEntry[] = []
       let duplicates = 0
-      for (const entry of imported) {
+      for (const entry of parsed.entries) {
         const key = entry.doi.toLowerCase()
         if (known.has(key)) {
           duplicates += 1
@@ -171,11 +162,41 @@ export function LibraryView({
       }
       setNotice(null)
       setPending({ entries: fresh, duplicates, skipped: parsed.skipped })
+      setPanel(null)
+      setPasted('')
     } catch (error) {
       setPending(null)
       setNotice({
         kind: 'error',
-        text: error instanceof Error ? error.message : 'Could not import that file.',
+        text: error instanceof Error ? error.message : 'Could not read that import.',
+      })
+    }
+  }
+
+  async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    // Reset so importing the same file again still fires a change event.
+    event.target.value = ''
+    if (!file) return
+    previewImport(file.name, await file.text())
+  }
+
+  function handlePasteImport() {
+    const text = pasted.trim()
+    if (text) previewImport('', text)
+  }
+
+  async function handleCopyJson() {
+    try {
+      await copyToClipboard(serializeLibrary(entries))
+      setNotice({
+        kind: 'ok',
+        text: `Copied ${plural(entries.length, 'paper')} as JSON. Paste it into another browser's import panel.`,
+      })
+    } catch {
+      setNotice({
+        kind: 'error',
+        text: 'Could not copy the JSON. Your browser may block the clipboard.',
       })
     }
   }
@@ -195,34 +216,6 @@ export function LibraryView({
     } finally {
       setRefreshing(false)
     }
-  }
-
-  async function handleShare() {
-    const url = shareLibraryUrl(entries)
-    if (!url) return
-
-    try {
-      await copyToClipboard(url)
-      setNotice({
-        kind: 'ok',
-        text: `Share link copied — ${plural(Math.min(entries.length, SHARE_LIMIT), 'paper')}. Notes stay private.`,
-      })
-    } catch {
-      setNotice({ kind: 'error', text: 'Could not copy the share link. Your browser may block the clipboard.' })
-    }
-  }
-
-  function addShared() {
-    if (!shared) return
-    const { added, skipped } = onImport(shared)
-    setNotice({
-      kind: 'ok',
-      text:
-        added === 0
-          ? `No new papers — all ${plural(skipped, 'entry')} are already in the library.`
-          : `Added ${plural(added, 'paper')} from the shared link${skipped > 0 ? `; ${plural(skipped, 'entry')} already in the library` : ''}.`,
-    })
-    onSharedDone()
   }
 
   function applyImport() {
@@ -272,8 +265,24 @@ export function LibraryView({
                 ? `Refresh ${staleCount} ${staleCount === 1 ? 'entry' : 'entries'}`
                 : 'Metadata current'}
           </button>
-          <button type="button" className="btn" onClick={handleShare} disabled={entries.length === 0}>
-            Copy share link
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setPanel(panel === 'export' ? null : 'export')}
+            aria-expanded={panel === 'export'}
+            aria-controls="io-panel"
+            disabled={entries.length === 0}
+          >
+            Export
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setPanel(panel === 'import' ? null : 'import')}
+            aria-expanded={panel === 'import'}
+            aria-controls="io-panel"
+          >
+            Import
           </button>
           <button
             type="button"
@@ -283,46 +292,79 @@ export function LibraryView({
           >
             Export BibTeX
           </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => downloadJson(entries)}
-            disabled={entries.length === 0}
-          >
-            Export JSON
-          </button>
-          <label className="btn">
-            Import file
-            <input
-              type="file"
-              accept=".json,.bib,.ris,.txt,application/json,application/x-bibtex,text/plain"
-              className="visually-hidden"
-              onChange={handleImport}
-            />
-          </label>
         </div>
       </div>
 
-      {ready && shared && shared.length > 0 && (
-        <section className="import-review" aria-label="Shared reading list">
-          <p className="hint">
-            This link contains {plural(shared.length, 'paper')}. Notes and full reference lists are not
-            included.
-          </p>
-          <ul className="import-preview">
-            {shared.slice(0, 5).map((entry) => (
-              <li key={entry.doi}>{workTitle(entry.work)}</li>
-            ))}
-            {shared.length > 5 && <li>…and {shared.length - 5} more</li>}
-          </ul>
-          <div className="btn-row">
-            <button type="button" className="btn btn-primary" onClick={addShared}>
-              Add to library
-            </button>
-            <button type="button" className="btn" onClick={onSharedDone}>
-              Dismiss
-            </button>
-          </div>
+      {panel && (
+        <section
+          id="io-panel"
+          className="import-review io-panel"
+          aria-label={panel === 'import' ? 'Import library' : 'Export library'}
+        >
+          {panel === 'export' ? (
+            <>
+              <p className="hint">
+                Download a JSON backup, or copy the JSON to paste into the import panel on another
+                device. Notes, statuses, and reading order are included.
+              </p>
+              <div className="btn-row">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => downloadJson(entries)}
+                >
+                  Download JSON
+                </button>
+                <button type="button" className="btn" onClick={handleCopyJson}>
+                  Copy JSON
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={() => setPanel(null)}>
+                  Close
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="hint">
+                Choose a JSON export, or paste its contents below. BibTeX and RIS files still import
+                too, and everything is previewed before it is added.
+              </p>
+              <div className="btn-row">
+                <label className="btn">
+                  Choose file
+                  <input
+                    type="file"
+                    accept=".json,.bib,.ris,.txt,application/json,application/x-bibtex,text/plain"
+                    className="visually-hidden"
+                    onChange={handleImportFile}
+                  />
+                </label>
+                <button type="button" className="btn btn-ghost" onClick={() => setPanel(null)}>
+                  Close
+                </button>
+              </div>
+              <label className="io-label">
+                <span>Paste library JSON</span>
+                <textarea
+                  className="io-textarea"
+                  value={pasted}
+                  onChange={(event) => setPasted(event.target.value)}
+                  placeholder={'{\n  "entries": [ … ]\n}'}
+                  spellCheck={false}
+                />
+              </label>
+              <div className="btn-row">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={!pasted.trim()}
+                  onClick={handlePasteImport}
+                >
+                  Review pasted JSON
+                </button>
+              </div>
+            </>
+          )}
         </section>
       )}
 

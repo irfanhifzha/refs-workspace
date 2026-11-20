@@ -28,13 +28,14 @@ so export a JSON backup before clearing site data.
 ### Seed the workspace (optional, 30 seconds)
 
 1. Open the **Library** tab.
-2. Choose **Import file**.
-3. Pick [`seed/example-library.json`](./seed/example-library.json).
+2. Open **Import**, then **Choose file**.
+3. Pick [`seed/example-library.json`](./seed/example-library.json). If you copied its contents
+   instead, open **Import**, paste them into the box, and press **Review pasted JSON**.
 4. Review the preview (5 new papers, 0 duplicates) and press **Import 5**.
 
 The seed adds five classic papers with varied statuses and notes, so the queue, filters, notes, and
 citation tools all have something to act on. Edit the JSON if you want your own starter list; the
-format is the same one **Export JSON** produces.
+format is the same one **Export → Download JSON** produces.
 
 ---
 
@@ -78,13 +79,13 @@ The seed's notes are written as examples of that "why this matters" note.
 
 ### Move a reading list to another device
 
-1. **Library → Copy share link**.
-2. Send it. The recipient opens it and gets a review panel before anything is added.
-3. They press **Add to library**.
+1. **Library → Export**, then **Download JSON** (or **Copy JSON** and send the text).
+2. On the other browser, open **Library → Import** and choose the file — or paste the JSON and press
+   **Review pasted JSON**.
+3. Review the new/duplicate counts and press **Import**.
 
-Share links cap at 40 papers and include DOI, title, up to three authors, year, journal, type, and
-status. Notes, added dates, and full reference lists are deliberately excluded. For an exact backup,
-use **Export JSON** instead.
+The export includes every entry's status, note, added date, and metadata snapshot, plus the reading
+order; there is no version field. BibTeX and RIS files import from the same panel.
 
 ### Read on a phone / on the train
 
@@ -154,10 +155,9 @@ npm run build
 | Symptom | Cause and fix |
 |---|---|
 | "Crossref is busy right now (rate limit)…" | A 429 paused new requests for its `Retry-After` window; wait and press **Try again**. |
-| Library is empty in another browser/profile | Data is local. Use **Export JSON** / **Import file**, or a share link for a reading list. |
+| Library is empty in another browser/profile | Data is local. Use **Export → Download JSON** or **Copy JSON**, then **Import** on the other browser. |
 | **Find open-access PDF** is missing | No deposited PDF link and no `VITE_UNPAYWALL_EMAIL` (or `VITE_CROSSREF_MAILTO`). |
-| Shared link shows fewer papers than expected | Links cap at 40. Export JSON for a full backup. |
-| Notes missing after a share-link import | Intentional: share links exclude notes. |
+| Pasting JSON does nothing | Press **Review pasted JSON** after pasting; imports are previewed before they merge. |
 | Offline detail page fails | Only the shell and saved library are offline; metadata and references need the network. |
 | Duplicate import warnings | Entries merge by DOI; the review step shows duplicates before applying anything. |
 

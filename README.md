@@ -19,15 +19,16 @@ as a starting point. Planning and status live in [`plan.md`](./plan.md).
   references into the app or out to doi.org.
 - Save papers to a library stored in IndexedDB (with a `localStorage` fallback), track `To read` /
   `Reading` / `Done`, attach notes, and reorder the `To read` queue by hand.
-- Share a reading list as a URL hash (up to 40 papers, notes excluded) and review it before importing.
+- Move a reading list between browsers by downloading the library as JSON or copying it to the
+  clipboard, then importing from a file or a paste; notes, statuses, and queue order travel with it.
 - Refresh stale metadata snapshots from Crossref on demand, with a "last updated" date per entry.
 - Open a PDF when Crossref deposits a link, or look one up through Unpaywall.
 - Copy APA, Chicago, Harvard, IEEE, MLA, or Vancouver citations (or BibTeX), and export the whole
   library as a `.bib` file.
 - Ask for related papers on a detail page — one opt-in Crossref request, reranked by shared subject
   terms and citation overlap, cached by DOI.
-- Back up and restore the library as JSON, or seed it from a BibTeX or RIS export. Imports are
-  previewed before merging, with new and duplicate entries counted and deduplicated by DOI.
+- Seed the library from a BibTeX or RIS export. Imports — file or pasted JSON — are previewed
+  before merging, with new and duplicate entries counted and deduplicated by DOI.
 - Keep every view and every search criterion in the URL — `/` (with `?q=`), `/library`, and `/paper?doi=…` — so reloads,
   bookmarks, and back/forward navigation work.
 
@@ -115,7 +116,7 @@ review step, reference-free library snapshots, a serialized request queue that f
 rate-limit headers, a manual reading queue, PDF links via Crossref/Unpaywall, six citation styles, an
 on-demand metadata refresh with per-entry dates, a local dev-only error log, a focus/ARIA accessibility
 pass, shared design tokens, a `/dev` component gallery, an IndexedDB library with localStorage
-migration/fallback, shareable reading-list links, sepia/high-contrast themes, an installable PWA with
+migration/fallback, JSON export/import by file or paste, sepia/high-contrast themes, an installable PWA with
 an offline shell and mobile bottom nav, Vitest and Playwright coverage, and a sharp-edged, grid-based
 responsive layout verified at 320–1440 px with Lighthouse performance/accessibility at 100.
 

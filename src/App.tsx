@@ -10,9 +10,7 @@ import { useRoute } from './hooks/useRoute'
 import type { SearchFilters } from './lib/crossref'
 import { parseDoiInput } from './lib/crossref'
 import { goBack, initializeRouter, navigate } from './lib/router'
-import type { LibraryEntry } from './lib/storage'
 import { loadSearchHistory, rememberSearch, saveSearchHistory } from './lib/storage'
-import { decodeLibraryHash } from './lib/share'
 import type { Theme } from './lib/theme'
 import { applyTheme, loadTheme, saveTheme, THEME_LABELS, THEMES } from './lib/theme'
 import './App.css'
@@ -31,9 +29,6 @@ function App() {
   })
   const library = useLibrary()
   const [history, setHistory] = useState(loadSearchHistory)
-  const [shared, setShared] = useState<LibraryEntry[] | null>(() =>
-    decodeLibraryHash(window.location.hash),
-  )
   const [theme, setTheme] = useState<Theme>(loadTheme)
 
   useEffect(() => {
@@ -43,13 +38,6 @@ function App() {
   useEffect(() => {
     applyTheme(theme)
   }, [theme])
-
-  // A shared link lands on the library so its reading list is visible.
-  useEffect(() => {
-    if (shared) navigate({ name: 'library' }, { replace: true })
-    // Shared links are read once at startup.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     saveSearchHistory(history)
@@ -118,15 +106,6 @@ function App() {
   )
 
   const clearHistory = useCallback(() => setHistory([]), [])
-
-  const clearShared = useCallback(() => {
-    setShared(null)
-    window.history.replaceState(
-      window.history.state,
-      '',
-      window.location.pathname + window.location.search,
-    )
-  }, [])
 
   return (
     <div className="app">
@@ -210,8 +189,6 @@ function App() {
             <LibraryView
               entries={library.entries}
               ready={library.ready}
-              shared={shared}
-              onSharedDone={clearShared}
               onOpen={openPaper}
               onRemove={library.remove}
               onStatus={library.setStatus}

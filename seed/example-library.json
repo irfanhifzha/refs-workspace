@@ -1,15 +1,29 @@
 {
-  "version": 1,
   "exportedAt": "2026-11-19T00:00:00.000Z",
   "entries": [
     {
       "doi": "10.1103/RevModPhys.20.367",
       "work": {
         "DOI": "10.1103/RevModPhys.20.367",
-        "title": ["Space-time approach to non-relativistic quantum mechanics"],
-        "author": [{ "given": "Richard P.", "family": "Feynman" }],
-        "container-title": ["Reviews of Modern Physics"],
-        "issued": { "date-parts": [[1948]] },
+        "title": [
+          "Space-time approach to non-relativistic quantum mechanics"
+        ],
+        "author": [
+          {
+            "given": "Richard P.",
+            "family": "Feynman"
+          }
+        ],
+        "container-title": [
+          "Reviews of Modern Physics"
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1948
+            ]
+          ]
+        },
         "type": "journal-article",
         "volume": "20",
         "issue": "2",
@@ -23,13 +37,29 @@
       "doi": "10.1103/RevModPhys.17.157",
       "work": {
         "DOI": "10.1103/RevModPhys.17.157",
-        "title": ["Interaction with the absorber as the mechanism of radiation"],
-        "author": [
-          { "given": "Richard P.", "family": "Feynman" },
-          { "given": "John A.", "family": "Wheeler" }
+        "title": [
+          "Interaction with the absorber as the mechanism of radiation"
         ],
-        "container-title": ["Reviews of Modern Physics"],
-        "issued": { "date-parts": [[1945]] },
+        "author": [
+          {
+            "given": "Richard P.",
+            "family": "Feynman"
+          },
+          {
+            "given": "John A.",
+            "family": "Wheeler"
+          }
+        ],
+        "container-title": [
+          "Reviews of Modern Physics"
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1945
+            ]
+          ]
+        },
         "type": "journal-article",
         "volume": "17",
         "issue": "2-3",
@@ -43,10 +73,25 @@
       "doi": "10.1002/j.1538-7305.1948.tb01338.x",
       "work": {
         "DOI": "10.1002/j.1538-7305.1948.tb01338.x",
-        "title": ["A mathematical theory of communication"],
-        "author": [{ "given": "Claude E.", "family": "Shannon" }],
-        "container-title": ["Bell System Technical Journal"],
-        "issued": { "date-parts": [[1948]] },
+        "title": [
+          "A mathematical theory of communication"
+        ],
+        "author": [
+          {
+            "given": "Claude E.",
+            "family": "Shannon"
+          }
+        ],
+        "container-title": [
+          "Bell System Technical Journal"
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1948
+            ]
+          ]
+        },
         "type": "journal-article",
         "volume": "27",
         "issue": "3",
@@ -60,10 +105,25 @@
       "doi": "10.1093/mind/LIX.236.433",
       "work": {
         "DOI": "10.1093/mind/LIX.236.433",
-        "title": ["Computing machinery and intelligence"],
-        "author": [{ "given": "Alan M.", "family": "Turing" }],
-        "container-title": ["Mind"],
-        "issued": { "date-parts": [[1950]] },
+        "title": [
+          "Computing machinery and intelligence"
+        ],
+        "author": [
+          {
+            "given": "Alan M.",
+            "family": "Turing"
+          }
+        ],
+        "container-title": [
+          "Mind"
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1950
+            ]
+          ]
+        },
         "type": "journal-article",
         "volume": "LIX",
         "issue": "236",
@@ -77,10 +137,25 @@
       "doi": "10.1002/andp.19053221004",
       "work": {
         "DOI": "10.1002/andp.19053221004",
-        "title": ["Zur Elektrodynamik bewegter Körper"],
-        "author": [{ "given": "Albert", "family": "Einstein" }],
-        "container-title": ["Annalen der Physik"],
-        "issued": { "date-parts": [[1905]] },
+        "title": [
+          "Zur Elektrodynamik bewegter Körper"
+        ],
+        "author": [
+          {
+            "given": "Albert",
+            "family": "Einstein"
+          }
+        ],
+        "container-title": [
+          "Annalen der Physik"
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1905
+            ]
+          ]
+        },
         "type": "journal-article",
         "volume": "322",
         "issue": "10",

@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 
 const DOI = '10.1234/test-paper'
@@ -94,16 +95,41 @@ test('theme choice persists across reloads', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'sepia')
 })
 
-test('a shared library link is reviewed before importing', async ({ page }) => {
-  const payload = { v: 1, e: [{ d: '10.1234/shared', t: 'Shared paper title', s: 'to-read' }] }
-  const token = Buffer.from(JSON.stringify(payload)).toString('base64url')
+test('pasted JSON is previewed, imported, and exported as a download', async ({ page }) => {
+  await page.goto('/library')
 
-  await page.goto(`/library#library=${token}`)
-  await expect(page.getByText('This link contains 1 paper.')).toBeVisible()
+  await page.getByRole('button', { name: 'Import', exact: true }).click()
+  const pasted = {
+    exportedAt: '2026-01-01T00:00:00.000Z',
+    entries: [
+      {
+        doi: '10.1234/pasted',
+        work: { DOI: '10.1234/pasted', title: ['Pasted paper title'] },
+        status: 'reading',
+        note: 'imported by paste',
+        addedAt: '2026-01-02T00:00:00.000Z',
+      },
+    ],
+  }
+  await page.getByLabel('Paste library JSON').fill(JSON.stringify(pasted))
+  await page.getByRole('button', { name: 'Review pasted JSON' }).click()
 
-  await page.getByRole('button', { name: 'Add to library' }).click()
-  await expect(page.getByRole('button', { name: 'Shared paper title' })).toBeVisible()
-  await expect(page.getByText(/Notes and full reference lists/)).toHaveCount(0)
+  await expect(page.getByText('Found 1 new paper')).toBeVisible()
+  await page.getByRole('button', { name: 'Import 1', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Pasted paper title' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Export', exact: true }).click()
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download JSON' }).click(),
+  ])
+  expect(download.suggestedFilename()).toBe('refs-workspace-library.json')
+
+  const path = await download.path()
+  const file = JSON.parse(await readFile(path!, 'utf8'))
+  expect(file.version).toBeUndefined()
+  expect(file.entries[0].doi).toBe('10.1234/pasted')
+  expect(file.entries[0].note).toBe('imported by paste')
 })
 
 test('the dev gallery renders component states', async ({ page }) => {

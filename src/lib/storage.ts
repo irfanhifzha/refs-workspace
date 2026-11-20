@@ -3,7 +3,6 @@ import type { CrossrefWork } from './crossref'
 export const LIBRARY_KEY = 'refs-workspace:library:v1'
 const HISTORY_KEY = 'refs-workspace:search-history:v1'
 const HISTORY_LIMIT = 10
-export const LIBRARY_FILE_VERSION = 1
 
 export const STATUSES = ['to-read', 'reading', 'done'] as const
 
@@ -26,7 +25,6 @@ export type LibraryEntry = {
 }
 
 export type LibraryFile = {
-  version: number
   exportedAt: string
   entries: LibraryEntry[]
 }
@@ -97,14 +95,13 @@ export function snapshotWork(work: CrossrefWork): CrossrefWork {
 
 export function serializeLibrary(entries: LibraryEntry[]): string {
   const file: LibraryFile = {
-    version: LIBRARY_FILE_VERSION,
     exportedAt: new Date().toISOString(),
     entries: entries.map(normalizeEntry),
   }
   return JSON.stringify(file, null, 2)
 }
 
-/** Accept both the versioned export format and a bare array of entries. */
+/** Accept the export object (with an optional legacy `version`), or a bare array of entries. */
 export function parseLibraryJson(text: string): LibraryEntry[] {
   let parsed: unknown
   try {
